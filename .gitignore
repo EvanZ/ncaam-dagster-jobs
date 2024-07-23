@@ -4,3 +4,5 @@ tmp*
 *.egg-info
 data/raw
 data/staging
+delete
+drop
