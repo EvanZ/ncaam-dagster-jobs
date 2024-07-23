@@ -1,0 +1,6 @@
+tmp*
+.virtualenv/*
+*.cpython*
+*.egg-info
+data/raw
+data/staging
