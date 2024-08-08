@@ -1,10 +1,9 @@
-from dagster import DailyPartitionsDefinition
-from ..assets import constants
+import os
+from datetime import datetime
 
-start_date = constants.START_DATE
-end_date = constants.END_DATE
+from dagster import DailyPartitionsDefinition
 
 daily_partition = DailyPartitionsDefinition(
-    start_date=start_date,
-    end_date=end_date
+    start_date=os.environ['START_DATE'],
+    end_date=os.environ['END_DATE']
 )

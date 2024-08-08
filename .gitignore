@@ -6,3 +6,4 @@ data/raw
 data/staging
 delete
 drop
+.vscode/
