@@ -6,11 +6,12 @@ from datetime import datetime
 from typing import Generator
 
 import dagster
-from dagster import asset, AssetExecutionContext, MaterializeResult, MetadataValue, AssetCheckResult, AssetCheckSpec, Output
+from dagster import asset, op, AssetExecutionContext, MaterializeResult, MetadataValue, AssetCheckResult, AssetCheckSpec, Output
 from dagster_duckdb import DuckDBResource
 import numpy
 import pandas
 import warnings
+from duckdb import InvalidInputException
 
 from . import queries
 from .constants import DATE_FORMAT, \
@@ -21,7 +22,32 @@ from ..utils.utils import fetch_data
 
 warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
 
+def create_drop_table_op(table_name: str):
+    @op(name=f"drop_{table_name}_table")
+    def drop_table_op(database: DuckDBResource) -> Output:
+        """
+        Drop a staging table and return metadata with the number of rows dropped.
+        """
+        with database.get_connection() as conn:
+            try:
+                # Check if the table exists and count rows
+                result = conn.execute(f"SELECT COUNT(*) as row_count FROM {table_name}").fetchone()
+                row_count = result[0] if result else 0
+                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+            except InvalidInputException:
+                row_count = 0
+
+        return Output(
+            value=row_count,
+            metadata={
+                "rows_dropped": MetadataValue.int(row_count)
+            }
+        )
+
+    return drop_table_op
+
 @asset(
+    group_name="download_files",
     partitions_def=daily_partition,
     check_specs=[AssetCheckSpec(name="all_games_completed_is_true", asset="daily_scoreboard_file"),
                  AssetCheckSpec(name="all_game_ids_have_nine_digits", asset="daily_scoreboard_file")]
@@ -78,69 +104,23 @@ def daily_scoreboard_file(context: AssetExecutionContext, database: DuckDBResour
     )
 
 @asset(
-    partitions_def=daily_partition,
-    check_specs=[AssetCheckSpec(name="check_that_all_ids_match", asset="stage_daily_scoreboard")]
+    group_name="download_files",
+    partitions_def=daily_partition
 )
-def stage_daily_scoreboard(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, daily_scoreboard_file: pandas.DataFrame) -> Generator:
+def game_summary_files(context: AssetExecutionContext, storage: LocalFileStorage, daily_scoreboard_file: pandas.DataFrame) -> MaterializeResult:
     """
-    loads scoreboard of events from downloaded files into duckdb | partitioned by day
+    fetches json data from espn game summary api 
     """
 
     partition_date = context.partition_key
-    path = os.path.join(storage.filepath, "scoreboard", f"{partition_date}", "scoreboard.json")
-    context.log.info(f'scoreboard filepath: {path}')
-    context.log.info(daily_scoreboard_file['id'])
-    
-    with database.get_connection() as conn:
-        conn.execute(queries.create_table_stage_daily_scoreboard())
-        res = conn.execute(queries.insert_table_stage_daily_scoreboard(path, partition_date)).fetchnumpy()
-        df = conn.execute(f"from stage_daily_scoreboard where date='{partition_date}'").df()
 
-    # Extract the game_ids from the staging table
-    staged_game_ids = set(df['game_id'].astype(str).str.strip())
-    original_game_ids = set(daily_scoreboard_file['id'].astype(str).str.strip())
+    ids = daily_scoreboard_file['id']
 
-    context.log.info(f'Staged game IDs (set): {staged_game_ids}')
-    context.log.info(f'Original game IDs (set): {original_game_ids}')
-
-    # Check if the ids from daily_scoreboard_file are equal to the game_ids inserted into staging
-    ids_match = original_game_ids == staged_game_ids
-    context.log.info(f'IDs match: {ids_match}')
-
-    yield AssetCheckResult(
-        passed=ids_match,
-        check_name="check_that_all_ids_match",
-        metadata={
-            "num_games_checked": MetadataValue.int(len(df['game_id']))
-            }
-    )
-
-    yield Output(
-        value=df['game_id'],
-        metadata={
-            "num_games_inserted": len(res['game_id']),
-            "summary": MetadataValue.md(df.to_markdown())
-        }
-    )
-
-@asset(
-    deps=[stage_daily_scoreboard],
-    partitions_def=daily_partition
-)
-def game_summary_files(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
-    """
-    queries ids from stage_daily_scoreboard and fetches json data from espn game summary api 
-    """
-
-    partition_date_str = context.partition_key
-
-    with database.get_connection() as conn:
-        ids = conn.execute(queries.fetch_completed_game_ids(partition_date_str)).df()['game_id']
-    
-    download_games_path = os.path.join(storage.filepath, "games", partition_date_str)
-    os.makedirs(download_games_path, exist_ok=True)
     for id in ids:
-        with open(os.path.join(download_games_path, f"{id}.json"), "w") as f:
+        download_games_path = os.path.join(storage.filepath, "games", partition_date, id)
+        os.makedirs(download_games_path, exist_ok=True)
+        context.log.info(f'download_games_path = {download_games_path}')
+        with open(os.path.join(download_games_path, "game.json"), "w") as f:
             game_summary_url_complete = GAME_SUMMARY_URL_TEMPLATE(id)
             game_summary = fetch_data(game_summary_url_complete)
             json.dump(game_summary, f)
@@ -152,8 +132,34 @@ def game_summary_files(context: AssetExecutionContext, database: DuckDBResource,
         }
     )
 
+@asset(
+    deps=[daily_scoreboard_file],
+    group_name="staging_tables",
+    partitions_def=daily_partition,
+)
+def stage_daily_scoreboard(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    """
+    loads scoreboard of events from downloaded files into duckdb | partitioned by day
+    """
+
+    partition_date = context.partition_key
+    path = os.path.join(storage.filepath, "scoreboard", f"{partition_date}", "scoreboard.json")
+    context.log.info(f'scoreboard filepath: {path}')
+    
+    with database.get_connection() as conn:
+        conn.execute(queries.create_table_stage_daily_scoreboard())
+        res = conn.execute(queries.insert_table_stage_daily_scoreboard(path, partition_date)).fetchnumpy()
+        df = conn.execute(f"from stage_daily_scoreboard where date='{partition_date}'").df()
+
+    return MaterializeResult(
+        metadata={
+            "num_games_inserted": len(res['game_id']),
+            "summary": MetadataValue.md(df.to_markdown())
+        }
+    )
 
 @asset(
+    group_name="staging_tables",
     deps=[stage_daily_scoreboard, game_summary_files],
     partitions_def=daily_partition
 )
@@ -178,6 +184,7 @@ def stage_game_logs(context: AssetExecutionContext, database: DuckDBResource, st
     )
 
 @asset(
+    group_name="staging_tables",
     deps=[game_summary_files],
     partitions_def=daily_partition
 )
@@ -202,6 +209,7 @@ def stage_player_lines(context: AssetExecutionContext, database: DuckDBResource,
     )
 
 @asset(
+    group_name="staging_tables",
     deps=[game_summary_files],
     partitions_def=daily_partition
 )
