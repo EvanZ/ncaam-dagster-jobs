@@ -1,3 +1,124 @@
+def teams_metadata(path: str) -> str:
+    """
+    read-only query for teams file
+    """
+    return f"""
+    select
+        season,
+        name as conference,
+        midsizeName as shortConference,
+        unnest(teams, recursive:=true)
+    from
+        (select
+            season.year as season,
+            unnest(groups, recursive:=true)
+        from
+            (select
+                unnest(leagues[1])
+            from
+            (select unnest(sports[1], recursive:=true) from read_json('{path}'))));
+    """
+
+def conferences_metadata(path: str) -> str:
+    """
+    read-only query for teams file
+    """
+    return f"""
+    select
+        groupId as id,
+        name,
+        shortName,
+        logo
+    from	
+    (
+        select unnest(conferences, recursive:=true) as group from read_json('{path}')
+    );
+    """
+
+def create_table_stage_conferences() -> str:
+    """
+    create the conferences table
+    """
+    return """
+    create table if not exists stage_conferences (
+        id INTEGER PRIMARY KEY,
+        name STRING,
+        shortName STRING,
+        logo STRING
+    );
+    """
+
+def create_table_stage_teams() -> str:
+    """
+    create the teams table
+    """
+    return """
+    create table if not exists stage_teams (
+        season INT,
+        conferenceName STRING,
+        shortConferenceName STRING,
+        id INTEGER PRIMARY KEY,
+        uid STRING,
+        slug STRING,
+        abbreviation STRING,
+        displayName STRING,
+        shortDisplayName STRING,
+        name STRING,
+        nickname STRING,
+        location STRING,
+        color STRING,
+        alternateColor STRING,
+        isActive BOOLEAN,
+        isAllStar BOOLEAN,
+        logos STRUCT(href VARCHAR, alt VARCHAR, rel VARCHAR[], width BIGINT, height BIGINT)[],
+        links STRUCT("language" VARCHAR, rel VARCHAR[], href VARCHAR, "text" VARCHAR, shortText VARCHAR, isExternal BOOLEAN, isPremium BOOLEAN, isHidden BOOLEAN)[]
+    )
+    """
+
+def insert_table_stage_conferences(path: str) -> str:
+    """
+    insert conference data into staging table
+    """
+    return f"""
+    insert or ignore into stage_conferences
+    select
+        groupId as id,
+        name,
+        shortName,
+        logo
+    from	
+    (
+        select unnest(conferences, recursive:=true) as group from read_json('{path}')
+    )
+    returning id, shortName;
+    """
+
+def insert_table_stage_teams(path: str) -> str:
+    """
+    insert teams data into staging table
+    """
+    return f"""
+    insert or ignore into stage_teams
+    select
+        season,
+        name as conferenceName,
+        midsizeName as shortConferenceName,
+        unnest(teams, recursive:=true)
+    from
+    (select
+        season.year as season,
+        unnest(groups, recursive:=true)
+    from
+    (
+    select
+        unnest(leagues[1])
+    from
+    (
+        select unnest(sports[1], recursive:=true) from read_json('{path}')))
+    )
+    returning season, id, displayName, conferenceName;
+    """
+
 def scoreboard_metadata(path: str) -> str:
     """
     query some fields from the daily scoreboard files and use them for markdown preview
@@ -7,8 +128,8 @@ def scoreboard_metadata(path: str) -> str:
         event.id,
         event.date,
         season.year,
-        season.type.abbreviation,
         event.name,
+        event.season.slug,
         event.status.period,
         event.status.type.completed,
         event.links[2].href as url
@@ -125,8 +246,10 @@ def create_table_stage_game_logs() -> str:
         minutes TINYINT,
         poss TINYINT,
         team_1_location STRING,
+        team_1_id INTEGER,
         team_1_logo STRING,
         team_2_location STRING,
+        team_2_id INTEGER,
         team_2_logo STRING,
         team_1_stats STRUCT(
             fgm INT, 
@@ -159,7 +282,7 @@ def create_table_stage_game_logs() -> str:
     );
     """
 
-def insert_table_stage_game_logs(path:str) -> str:
+def insert_table_stage_game_logs(files:list[str]) -> str:
     """
     insert box score totals into staging table
     """
@@ -198,7 +321,7 @@ def insert_table_stage_game_logs(path:str) -> str:
                 tov := boxscore.teams[2].statistics[15].displayValue::INT,
                 pf := boxscore.teams[2].statistics[22].displayValue::INT
                 ) as team_2_stats
-        from read_json('{path}')
+        from read_json({files})
         )
         select 
             s.game_id,
@@ -208,8 +331,10 @@ def insert_table_stage_game_logs(path:str) -> str:
             round(0.5*(team_1_stats.fga+team_2_stats.fga)+0.44*(team_1_stats.fta+team_2_stats.fta)-
                 (team_1_stats.orb+team_2_stats.orb)+(team_1_stats.tov+team_2_stats.tov)) as poss,
             sds.team_1_info.location as team_1_location,
+            sds.team_1_id as team_1_id,
             sds.team_1_info.logo as team_1_logo,
             sds.team_2_info.location as team_2_location,
+            sds.team_2_id as team_2_id,
             sds.team_2_info.logo as team_2_logo,
             team_1_stats,
             team_2_stats
@@ -242,7 +367,7 @@ def create_table_stage_player_lines() -> str:
         )
     """
 
-def insert_table_stage_player_lines(path:str, date:str) -> str:
+def insert_table_stage_player_lines(files:list[str], date:str) -> str:
     """
     insert data into staging table for player lines
     """
@@ -302,7 +427,7 @@ def insert_table_stage_player_lines(path:str, date:str) -> str:
                 boxscore.teams[1].team.id::INT as team_1_id,
                 boxscore.teams[2].team.id::INT as team_2_id,
                 unnest(boxscore['players']) as players 
-        from read_json('{path}')
+        from read_json({files})
         ))
         where stats[1] is not null
         returning player_id;
@@ -323,8 +448,8 @@ def create_table_stage_plays() -> str:
         type_id INT,
         type_text STRING,
         text STRING,
-        unassisted STRUCT(player STRING, result STRING, "event" STRING),
-        assisted STRUCT(player STRING, result STRING, "event" STRING, assist STRING),
+        shot STRUCT(player STRING, result STRING, "event" STRING),
+        assist STRING,
         event STRUCT(player STRING, "event" STRING),
         foul STRUCT("event" STRING, player STRING),
         awayScore INT,
@@ -335,14 +460,13 @@ def create_table_stage_plays() -> str:
         team_id INT,
         wallclock TIMESTAMP,
         shootingPlay BOOL,
-        coordinate STRUCT(x INT, y INT),
         player_1_id INT,
         player_2_id INT,
         PRIMARY KEY (play_id)
     );
     """
 
-def insert_table_stage_plays(path:str, date:str) -> str:
+def insert_table_stage_plays(files:list[str], date:str) -> str:
     """
     insert plays into staging table
     """
@@ -358,8 +482,8 @@ def insert_table_stage_plays(path:str, date:str) -> str:
             type.id::INT as type_id,
             type.text as type_text,
             text,
-            regexp_extract(text,'(?P<player>[\W\w\s]+) (?P<result>missed|made) (?P<event>[\w\s]+).$', ['player','result','event']) as unassisted,
-            regexp_extract(text, '(?P<player>[\W\w\s]+) (?P<result>missed|made) (?P<event>[\w\s]+).\s+Assisted by (?P<assist>[\w\s\W]+).$', ['player','result','event','assist']) as assisted,
+            regexp_extract(text,'(?P<player>[\W\w\s]+) (?P<result>missed|made) (?P<event>[\w\s]+).', ['player','result','event']) as shot,
+            nullif(regexp_extract(text, 'Assisted by ([\w\s\W]+).$', 1), '') as assist,
             regexp_extract(text, '(?P<player>[\w\s\W]+) (?P<event>Offensive Rebound|Defensive Rebound|Turnover|Steal|Block).$', ['player', 'event']) as event,
             regexp_extract(text, '(?P<event>Foul) on (?P<player>[\w\s\W]+).$', ['event', 'player']) as foul,
             awayScore,
@@ -370,7 +494,6 @@ def insert_table_stage_plays(path:str, date:str) -> str:
             team.id::INT as team_id,
             wallClock,
             shootingPlay,
-            coordinate,
             participants[1].athlete.id::INT as player_1_id,
             participants[2].athlete.id::INT as player_2_id
         from
@@ -380,7 +503,7 @@ def insert_table_stage_plays(path:str, date:str) -> str:
             header.id as game_id,
             header.season.year::INT as season,
             generate_subscripts(plays, 1) as index
-        from read_json('{path}')
+        from read_json({files})
         )
         returning play_id;
     """

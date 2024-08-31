@@ -13,6 +13,7 @@ drop_stage_daily_scoreboard = create_drop_table_op("stage_daily_scoreboard")
 drop_stage_game_logs = create_drop_table_op("stage_game_logs")
 drop_stage_player_lines = create_drop_table_op("stage_player_lines")
 drop_stage_plays = create_drop_table_op("stage_plays")
+drop_stage_conferences = create_drop_table_op("stage_conference")
 
 # Now, use those ops within the job definition
 @job
@@ -21,3 +22,4 @@ def cleanup_job():
     drop_stage_game_logs()
     drop_stage_player_lines()
     drop_stage_plays()
+    drop_stage_conferences()
