@@ -1,0 +1,14 @@
+ops:
+  stage_kenpom:
+    config:
+      cols: ["team", "rank", "ortg", "drtg"]
+resources:
+  database:
+    config:
+      database:
+        env: 'DUCKDB_DATABASE'
+  storage:
+    config:
+      filepath:
+        env: 'LOCAL_STORAGE_PATH'
+

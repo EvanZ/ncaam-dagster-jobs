@@ -4,5 +4,7 @@ TEAMS_URL = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-c
 CONFERENCES_URL = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard/conferences?groups=50"
 ROSTER_URL = lambda id, season: f"https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/{id}?enable=roster&season={season}"
 
+KENPOM_URL = "https://kenpom.com/index.php?y=2023&s=RankSOS"
+
 DATE_FORMAT = "%Y%m%d"
 

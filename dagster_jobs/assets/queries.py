@@ -48,6 +48,42 @@ def create_table_stage_conferences() -> str:
     );
     """
 
+def create_table_stage_players() -> str:
+    """
+    create players staging table
+    """
+    return """
+    create table if not exists stage_players (
+        id INT PRIMARY KEY,
+        team_id INT,
+        guid UUID,
+        first_name STRING,
+        last_name STRING,
+        full_name STRING,
+        display_name STRING,
+        short_name STRING,
+        weight DOUBLE,
+        display_weight STRING,
+        height DOUBLE,
+        display_height STRING,
+        city STRING,
+        state STRING,
+        country STRING,
+        slug STRING,
+        headshot_href STRING,
+        jersey INT,
+        position_id TINYINT,
+        position_name STRING,
+        position_display_name STRING,
+        position_abbreviation STRING,
+        experience_years TINYINT,
+        experience_display_value STRING,
+        experience_abbreviation STRING,
+        status_id TINYINT,
+        status_name STRING
+    );
+    """
+
 def create_table_stage_teams() -> str:
     """
     create the teams table
@@ -91,6 +127,50 @@ def insert_table_stage_conferences(path: str) -> str:
         select unnest(conferences, recursive:=true) as group from read_json('{path}')
     )
     returning id, shortName;
+    """
+
+def insert_table_stage_players(path: list[str]) -> str:
+    """
+    insert players into staging table
+    """
+    return f"""
+    insert or ignore into stage_players
+    select
+        id::INT as id,
+        team_id::INT as team_id,
+        guid,
+        firstName as first_name,
+        lastName as last_name,
+        fullName as full_name,
+        displayName as display_name,
+        shortName as short_name,
+        weight,
+        displayWeight as display_weight,
+        height,
+        displayHeight as display_height,
+        birthplace.city as city,
+        birthplace.state as state,
+        birthplace.country as country,
+        slug,
+        headshot.href as headshot_href,
+        jersey::INT as jersey,
+        position.id::TINYINT as position_id,
+        position.name as position_name,
+        position.displayName as position_display_name,
+        position.abbreviation as position_abbreviation,
+        experience.years::TINYINT as experience_years,
+        experience.displayValue as experience_display_value,
+        experience.abbreviation as experience_abbreviation,
+        status.id::TINYINT as status_id,
+        status.name as status_name
+    from
+    (select
+        id as team_id,
+        unnest(athletes, max_depth:=2) as athlete
+    from (
+    select unnest(team, recursive:=true) as team from read_json_auto({path}, union_by_name=true)
+    ))
+    returning id, team_id, display_name, display_height, display_weight, position_display_name;    
     """
 
 def insert_table_stage_teams(path: str) -> str:
@@ -506,4 +586,20 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
         from read_json({files})
         )
         returning play_id;
+    """
+
+def insert_table_stage_kenpom(path: str) -> str:
+    """
+    query to insert values from kenpom file
+    """
+    return f"""
+    insert or ignore into stage_kenpom
+    select
+        rank,
+        team,
+        ortg,
+        drtg,
+        year
+    from read_csv('{path}')
+    returning rank, team;
     """

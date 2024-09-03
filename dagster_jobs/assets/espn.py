@@ -10,15 +10,22 @@ from typing import Generator
 import dagster
 from dagster import asset, op, AssetExecutionContext, MaterializeResult, MetadataValue, AssetCheckResult, AssetCheckSpec, Output, RetryPolicy
 from dagster_duckdb import DuckDBResource
-from duckdb import InvalidInputException
+from duckdb import InvalidInputException, ColumnExpression
 import fasteners
 import numpy
 import pandas
 import warnings
 
 from . import queries
-from .constants import DATE_FORMAT, ROSTER_URL, \
-    SCOREBOARD_URL_TEMPLATE, GAME_SUMMARY_URL_TEMPLATE, TEAMS_URL, CONFERENCES_URL
+from .constants import (
+    DATE_FORMAT, 
+    ROSTER_URL, 
+    SCOREBOARD_URL_TEMPLATE, 
+    GAME_SUMMARY_URL_TEMPLATE, 
+    TEAMS_URL, 
+    CONFERENCES_URL,
+    KENPOM_URL
+    )
 from ..partitions import daily_partition
 from ..resources import LocalFileStorage
 from ..utils.utils import fetch_data
@@ -48,6 +55,36 @@ def create_drop_table_op(table_name: str):
         )
 
     return drop_table_op
+
+@asset(
+    group_name="update_manually"
+)
+def stage_kenpom(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    """
+    stage latest kenpom rankings
+    """
+    path = os.path.join(storage.filepath, "kenpom", "kenpom.csv")
+    context.log.info(path)
+
+    with database.get_connection() as conn:
+        conn.execute("""
+                     create table if not exists stage_kenpom (
+                        rank INT,
+                        team STRING PRIMARY KEY,
+                        ortg DOUBLE,
+                        drtg DOUBLE,
+                        year INT
+                     );
+                     """)
+        df = conn.execute(queries.insert_table_stage_kenpom(path)).df()        
+ 
+    return MaterializeResult(
+        metadata={
+            "path": path,
+            "df": MetadataValue.md(df.to_markdown()),
+            "num_teams": MetadataValue.int(len(df))
+        }
+    )
 
 @asset(
     group_name="update_annual"
@@ -298,6 +335,30 @@ def game_summary_files(context: AssetExecutionContext, storage: LocalFileStorage
         metadata={
             "num_games": len(ids),
             "ids": MetadataValue.md(ids.to_markdown())
+        }
+    )
+
+@asset(
+        group_name="udpate_annual",
+        deps=[rosters_files]
+)
+def stage_players(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    """
+    stage player info from rosters download
+    """
+    with database.get_connection() as conn:
+        conn.execute("drop table if exists stage_players;")
+        conn.execute(queries.create_table_stage_players())
+
+    all_rosters_paths = glob(os.path.join(storage.filepath, "rosters", "*", "roster.json"))
+    with database.get_connection() as conn:
+        context.log.info(queries.insert_table_stage_players(all_rosters_paths))
+        df = conn.execute(queries.insert_table_stage_players(all_rosters_paths)).df()
+
+    return MaterializeResult(
+        metadata={
+            "players": MetadataValue.md(df.sample(n=100).to_markdown()),
+            "num_players": len(df['id'])
         }
     )
 
