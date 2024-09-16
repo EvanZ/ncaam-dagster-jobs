@@ -474,3 +474,52 @@ def stage_plays(context: AssetExecutionContext, database: DuckDBResource, storag
             "summary": MetadataValue.md(df[['game_id','date','play_index','text','assist','period','game_clock']].to_markdown())
         }
     )
+
+@asset(
+    group_name="update_annual"
+)
+def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    """
+    stage rsci rankings from csv files
+    """
+    path = os.path.join(storage.filepath, "rsci", "*.csv")
+    context.log.info(path)
+
+    with database.get_connection() as conn:
+        conn.execute("drop table if exists stage_rsci_rankings;")
+        conn.execute(f"""
+                     create table stage_rsci_rankings as (
+                     from read_csv('{path}', header=true, filename=true)
+                     );
+                     """)
+        schema = conn.execute("describe from stage_rsci_rankings limit 1;").df()
+        df = conn.execute("from stage_rsci_rankings;").df()
+        context.log.info(schema)
+    
+    return MaterializeResult(
+        metadata={
+            "schema": MetadataValue.md(schema.to_markdown()),
+            "count": MetadataValue.int(len(df)),
+            "sample": MetadataValue.md(df.sample(n=50).to_markdown())
+        }
+    )
+
+@asset
+def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    start_date = os.environ['START_DATE']
+    end_date = os.environ['END_DATE']
+    sql_query = queries.stage_player_shots_by_game(start_date, end_date)
+    context.log.info(sql_query)
+
+    with database.get_connection() as conn:
+        conn.execute(sql_query)
+        count_players = conn.execute(f"select count(distinct player_id) as players from stage_player_shots_by_game;").fetchone()[0]
+        df = conn.execute("from stage_player_shots_by_game limit 10;").df()
+        context.log.info(count_players)
+
+    return MaterializeResult(
+        metadata={
+            "players": MetadataValue.int(count_players),
+            "sample": MetadataValue.md(df.to_markdown())
+        }
+    )

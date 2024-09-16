@@ -517,7 +517,7 @@ def create_table_stage_plays() -> str:
     """"
     create table for staging play-by-play
     """
-    return f"""
+    return """
     create table if not exists stage_plays (
         play_id BIGINT,
         sequence_id INT,
@@ -603,3 +603,30 @@ def insert_table_stage_kenpom(path: str) -> str:
     from read_csv('{path}')
     returning rank, team;
     """
+
+def stage_player_shots_by_game(start_date: str, end_date: str) -> str:
+    """
+    count dunks, layups, mid-range and 3pt shots by player by game
+    """
+    return f"""
+    create or replace table stage_player_shots_by_game as
+    select 
+        game_id,
+        team_id,
+        player_1_id as player_id,
+        count(case when type_id=574 and shot.result='made' and assist is not null then 1 end) as ast_dunk,
+        count(case when type_id=574 and shot.result='made' and assist is null then 1 end) as unast_dunk,
+        count(case when type_id=574 and shot.result='missed' then 1 end) as miss_dunk,
+        count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_layup,
+        count(case when type_id=572 and shot.result='made' and assist is null then 1 end) as unast_layup,
+        count(case when type_id=572 and shot.result='missed' then 1 end) as miss_layup,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_2pt,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is null then 1 end) as unast_2pt,
+        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_3pt,
+        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is null then 1 end) as unast_3pt
+    from stage_plays
+    where type_id in (558, 572, 574) and
+    date between '{start_date}' and '{end_date}'
+    group by ALL
+    """
+
