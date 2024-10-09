@@ -328,9 +328,13 @@ def create_table_stage_game_logs() -> str:
         team_1_location STRING,
         team_1_id INTEGER,
         team_1_logo STRING,
+        team_1_name STRING,
+        team_1_display_name STRING,
         team_2_location STRING,
         team_2_id INTEGER,
         team_2_logo STRING,
+        team_2_name STRING,
+        team_2_display_name STRING,
         team_1_stats STRUCT(
             fgm INT, 
             fga INT, 
@@ -358,7 +362,9 @@ def create_table_stage_game_logs() -> str:
             stl INT, 
             blk INT, 
             tov INT, 
-            pf INT)
+            pf INT),
+        team_1_pts INTEGER,
+        team_2_pts INTEGER
     );
     """
 
@@ -371,6 +377,16 @@ def insert_table_stage_game_logs(files:list[str]) -> str:
         with s as (
         select
             header.id::INTEGER as game_id,
+            boxscore.teams[1].team.id as team_1_id,
+            boxscore.teams[1].team.location as team_1_location,
+            boxscore.teams[1].team.logo as team_1_logo,
+            boxscore.teams[1].team.name as team_1_name,
+            boxscore.teams[1].team.displayName as team_1_display_name,
+            boxscore.teams[2].team.id as team_2_id,
+            boxscore.teams[2].team.location as team_2_location,
+            boxscore.teams[2].team.logo as team_2_logo,
+            boxscore.teams[2].team.name as team_2_name,
+            boxscore.teams[2].team.displayName as team_2_display_name,
             struct_pack(
                 fgm := regexp_extract(boxscore.teams[1].statistics[1].displayValue, '([0-9]+)-',1)::INT,
                 fga := regexp_extract(boxscore.teams[1].statistics[1].displayValue, '-([0-9]+)',1)::INT,
@@ -410,14 +426,20 @@ def insert_table_stage_game_logs(files:list[str]) -> str:
             sds.minutes,
             round(0.5*(team_1_stats.fga+team_2_stats.fga)+0.44*(team_1_stats.fta+team_2_stats.fta)-
                 (team_1_stats.orb+team_2_stats.orb)+(team_1_stats.tov+team_2_stats.tov)) as poss,
-            sds.team_1_info.location as team_1_location,
-            sds.team_1_id as team_1_id,
-            sds.team_1_info.logo as team_1_logo,
-            sds.team_2_info.location as team_2_location,
-            sds.team_2_id as team_2_id,
-            sds.team_2_info.logo as team_2_logo,
+            s.team_1_location,
+            s.team_1_id,
+            s.team_1_logo,
+            s.team_1_name,
+            s.team_1_display_name,
+            s.team_2_location,
+            s.team_2_id,
+            s.team_2_logo,
+            s.team_2_name,
+            s.team_2_display_name, 
             team_1_stats,
-            team_2_stats
+            team_2_stats,
+            team_1_stats.ftm + 3*team_1_stats.fg3m + 2*(team_1_stats.fgm-team_1_stats.fg3m) as team_1_pts,
+            team_2_stats.ftm + 3*team_2_stats.fg3m + 2*(team_2_stats.fgm-team_2_stats.fg3m) as team_2_pts
         from s join stage_daily_scoreboard sds on s.game_id=sds.game_id
         returning game_id;
     """
@@ -434,15 +456,14 @@ def create_table_stage_player_lines() -> str:
             player_id INT,
             season INT,
             opp_id INT,
+            team_id INT,
             home BOOL,
-            team_1_id INT,
-            team_2_id INT,
             name STRING,
             player_url STRING,
             img_url STRING,
             starter BOOL,
             jersey TINYINT,
-            stats STRUCT("minutes" INTEGER, fgm INTEGER, fga INTEGER, fg3m INTEGER, fg3a INTEGER, ftm INTEGER, fta INTEGER, orb INTEGER, drb INTEGER, ast INTEGER, stl INTEGER, blk INTEGER, tov INTEGER, pf INTEGER, pts INTEGER),
+            stats STRUCT("minutes" INTEGER, fgm INTEGER, fga INTEGER, fg3m INTEGER, fg3a INTEGER, ftm INTEGER, fta INTEGER, orb INTEGER, drb INTEGER, reb INTEGER, ast INTEGER, stl INTEGER, blk INTEGER, tov INTEGER, pf INTEGER, pts INTEGER),
             PRIMARY KEY (game_id, player_id)
         )
     """
@@ -463,12 +484,14 @@ def insert_table_stage_player_lines(files:list[str], date:str) -> str:
                 when displayOrder=1 then team_2_id
                 else team_1_id
             end as opp_id,
+            case
+                when displayOrder=1 then team_1_id
+                else team_2_id
+            end as team_id,
             case 
                 when displayOrder=1 then false
                 else true
             end as home,
-            team_1_id,
-            team_2_id,
             displayName as name,
             links[1].href as player_url,
             href as img_url,
@@ -484,12 +507,13 @@ def insert_table_stage_player_lines(files:list[str], date:str) -> str:
                 fta := regexp_extract(stats[4], '-([0-9]+)',1)::INT,
                 orb := stats[5]::INT,
                 drb := stats[6]::INT,
-                ast := stats[7]::INT,
-                stl := stats[8]::INT,
-                blk := stats[9]::INT,
-                tov := stats[10]::INT,
-                pf := stats[11]::INT,
-                pts := stats[12]::INT
+                reb := stats[7]::INT, 
+                ast := stats[8]::INT,
+                stl := stats[9]::INT,
+                blk := stats[10]::INT,
+                tov := stats[11]::INT,
+                pf := stats[12]::INT,
+                pts := stats[13]::INT
             ) as stats
         from
         (select 
@@ -522,6 +546,9 @@ def create_table_stage_plays() -> str:
         play_id BIGINT,
         sequence_id INT,
         game_id INT,
+        team_id INT,
+        opp_id INT,
+        home BOOL,
         date DATE,
         season INT,
         play_index INT,
@@ -537,7 +564,6 @@ def create_table_stage_plays() -> str:
         period TINYINT,
         game_clock STRING,
         scoringPlay BOOL,
-        team_id INT,
         wallclock TIMESTAMP,
         shootingPlay BOOL,
         player_1_id INT,
@@ -556,6 +582,13 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
             id::BIGINT as play_id,
             sequenceNumber::INT as sequence_id,
             game_id::INT as game_id,
+            team.id::INT as team_id,
+            case
+                when team.id=team_1_id then team_2_id else team_1_id end 
+            as opp_id,
+            case
+                when team.id=team_1_id then false else true end
+            as home,
             '{date}'::DATE as date,
             season,
             index::INT as play_index,
@@ -571,7 +604,6 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
             period.number::TINYINT as period,
             clock.displayValue as game_clock,
             scoringPlay,
-            team.id::INT as team_id,
             wallClock,
             shootingPlay,
             participants[1].athlete.id::INT as player_1_id,
@@ -582,6 +614,8 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
             unnest(plays, max_depth := 2) as play,
             header.id as game_id,
             header.season.year::INT as season,
+            boxscore.teams[1].team.id as team_1_id,
+            boxscore.teams[2].team.id as team_2_id,
             generate_subscripts(plays, 1) as index
         from read_json({files})
         )
@@ -604,29 +638,213 @@ def insert_table_stage_kenpom(path: str) -> str:
     returning rank, team;
     """
 
-def stage_player_shots_by_game(start_date: str, end_date: str) -> str:
+def create_table_stage_player_shots_by_game() -> str:
+    """
+    for tracking shot types (dunks, layups, etc)
+    """
+    return """
+    create table if not exists stage_player_shots_by_game (
+        game_id INT,
+        date DATE,
+        team_id INT,
+        opp_id INT,
+        home BOOLEAN,
+        player_id INT,
+        ast_tip INT,
+        unast_tip INT,
+        miss_tip INT,
+        ast_dunk INT,
+        unast_dunk INT,
+        miss_dunk INT,
+        ast_layup INT,
+        unast_layup INT,
+        miss_layup INT,
+        ast_mid INT,
+        unast_mid INT,
+        miss_mid INT,
+        ast_3pt INT,
+        unast_3pt INT,
+        miss_3pt INT,
+        PRIMARY KEY (game_id, player_id)
+    );
+    """
+
+def insert_table_stage_player_shots_by_game(date: str) -> str:
     """
     count dunks, layups, mid-range and 3pt shots by player by game
     """
     return f"""
-    create or replace table stage_player_shots_by_game as
+    insert or ignore into stage_player_shots_by_game
     select 
         game_id,
+        date,
         team_id,
+        opp_id,
+        home,
         player_1_id as player_id,
+        count(case when type_id=437 and shot.result='made' and assist is not null then 1 end) as ast_tip,
+        count(case when type_id=437 and shot.result='made' and assist is null then 1 end) as unast_tip,
+        count(case when type_id=437 and shot.result='missed' then 1 end) as miss_tip,    
         count(case when type_id=574 and shot.result='made' and assist is not null then 1 end) as ast_dunk,
         count(case when type_id=574 and shot.result='made' and assist is null then 1 end) as unast_dunk,
         count(case when type_id=574 and shot.result='missed' then 1 end) as miss_dunk,
         count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_layup,
         count(case when type_id=572 and shot.result='made' and assist is null then 1 end) as unast_layup,
         count(case when type_id=572 and shot.result='missed' then 1 end) as miss_layup,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_2pt,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is null then 1 end) as unast_2pt,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_mid,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is null then 1 end) as unast_mid,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='missed' then 1 end) as miss_mid,
         count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_3pt,
-        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is null then 1 end) as unast_3pt
+        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is null then 1 end) as unast_3pt,
+        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='missed' then 1 end) as miss_3pt
     from stage_plays
-    where type_id in (558, 572, 574) and
-    date between '{start_date}' and '{end_date}'
+    where type_id in (437, 558, 572, 574) and
+    date='{date}' and player_1_id is not null
     group by ALL
+    returning game_id, team_id, opp_id, home, player_id;
     """
 
+def create_table_stage_player_assists_by_game() -> str:
+    """
+    create table for staging player assist types
+    """
+    return """
+    create table if not exists stage_player_assists_by_game (
+        game_id INT,
+        team_id INT,
+        opp_id INT,
+        home BOOLEAN,
+        player_id INT,
+        ast_to_dunk INT,
+        ast_to_layup INT,
+        ast_to_mid INT,
+        ast_to_3pt INT,
+        PRIMARY KEY (game_id, player_id)
+    );
+    """
+
+def stage_player_assists_by_game(date: str) -> str:
+    """
+    count different types of assists
+    """
+    return f"""
+    create or replace table stage_player_assists_by_game as
+    select 
+        game_id,
+        team_id,
+        opp_id,
+        home,
+        player_2_id as player_id,
+        count(case when type_id=574 and shot.result='made' and assist is not null then 1 end) as ast_to_dunk,
+        count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_to_layup,
+        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_mid,
+        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_3pt
+    from stage_plays
+    where type_id in (558, 572, 574) and
+    date='{date}'
+    and player_2_id is not null
+    group by ALL;
+    """
+
+def insert_table_stage_top_lines(start_date: str, end_date: str) -> str:
+    return f"""
+    create or replace table stage_top_lines as
+    with lines as (
+        select
+            player_id,
+            game_id,
+            date,
+            opp_id,
+            team_id,
+            home,
+            name,
+            player_url,
+            img_url,
+            starter,
+            jersey,
+            stats.minutes,
+            stats.fgm,
+            stats.fga,
+            stats.fg3m,
+            stats.fg3a,
+            stats.ftm,
+            stats.fta,
+            stats.orb,
+            stats.drb,
+            stats.reb,
+            stats.ast,
+            stats.stl,
+            stats.blk,
+            stats.tov,
+            stats.pf,
+            stats.pts
+        from stage_player_lines
+    )
+    select
+        l.player_id,
+        display_name,
+        name,
+        slug,
+        player_url,
+        img_url,
+        p.jersey,
+        display_weight,
+        display_height,
+        experience_abbreviation,
+        starter,
+        l.game_id,
+        l.date,
+        l.team_id,
+        l.home,
+        opp_id,
+        stl,
+        blk,
+        fgm
+        fga,
+        fg3m,
+        fg3a,
+        tov,
+        ast,
+        fta,
+        ftm,
+        drb,
+        orb,
+        l.minutes,
+        ast_dunk,
+        unast_dunk,
+        miss_dunk,
+        ast_layup,
+        unast_layup,
+        miss_layup,
+        ast_2pt,
+        unast_2pt,
+        ast_3pt,
+        unast_3pt,
+        g.minutes as game_minutes,
+        poss,
+        team_1_location,
+        team_2_location,
+        team_1_logo,
+        team_2_logo,
+        team_1_pts,
+        team_2_pts,
+        team_1_stats.fga as team_1_fga,
+        team_1_stats.fta as team_1_fta,
+        team_1_stats.tov as team_1_tov,
+        team_2_stats.fga as team_2_fga,
+        team_2_stats.fta as team_2_fta,
+        team_2_stats.tov as team_2_tov,
+        round(
+            0.6*orb + 0.3*drb + 1.0*stl + 0.7*blk + 0.3*(ast_dunk+ast_2pt+ast_layup) +
+            1.0*(unast_dunk+unast_layup+unast_2pt) +
+            2.0*unast_3pt + 1.3*ast_3pt + (-0.7)*(fga-fgm) + 0.7*ast + 0.5*ftm - 0.5*(fta-ftm) + 
+            0.1*fta + 0.1*(fga-fg3a) + 0.2*fg3a - 0.8*tov
+        , 3) as ez
+    from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
+    and l.player_id=s.player_id 
+    join stage_game_logs g on l.game_id=g.game_id
+    left join stage_players p on l.player_id=p.id
+    where (g.date between '{start_date}' and '{end_date}')
+    and team_1_logo is not null and team_2_logo is not null
+    order by ez desc
+    """

@@ -4,17 +4,31 @@ import os
 import re
 from glob import glob
 from datetime import datetime
-from typing import Generator
-
+from typing import Generator, Literal
+import warnings
 
 import dagster
-from dagster import asset, op, AssetExecutionContext, MaterializeResult, MetadataValue, AssetCheckResult, AssetCheckSpec, Output, RetryPolicy
+from dagster import (
+    asset, 
+    op, 
+    AssetExecutionContext, 
+    MaterializeResult, 
+    MetadataValue, 
+    AssetCheckResult, 
+    AssetCheckSpec, 
+    AssetsDefinition,
+    Output, 
+    RetryPolicy,
+)
 from dagster_duckdb import DuckDBResource
-from duckdb import InvalidInputException, ColumnExpression
+from duckdb import InvalidInputException
 import fasteners
 import numpy
 import pandas
-import warnings
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.linear_model import RidgeCV
 
 from . import queries
 from .constants import (
@@ -407,6 +421,7 @@ def stage_game_logs(context: AssetExecutionContext, database: DuckDBResource, st
 
     with fasteners.InterProcessLock('/tmp/duckdb.lock'):
         with database.get_connection() as conn:
+            context.log.info(queries.create_table_stage_game_logs())
             conn.execute(queries.create_table_stage_game_logs())
             context.log.info(queries.insert_table_stage_game_logs(files))
             res = conn.execute(queries.insert_table_stage_game_logs(files)).fetchnumpy()
@@ -504,17 +519,42 @@ def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource
         }
     )
 
-@asset
+@asset(
+    deps=[stage_plays],
+    group_name="update_daily",
+    partitions_def=daily_partition,
+)
 def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
-    start_date = os.environ['START_DATE']
-    end_date = os.environ['END_DATE']
-    sql_query = queries.stage_player_shots_by_game(start_date, end_date)
+    partition_date = context.partition_key
+
+    with database.get_connection() as conn:
+        context.log.info(queries.create_table_stage_player_shots_by_game())
+        conn.execute(queries.create_table_stage_player_shots_by_game())
+        context.log.info(queries.insert_table_stage_player_shots_by_game(partition_date))
+        res = conn.execute(queries.insert_table_stage_player_shots_by_game(partition_date)).fetchnumpy()
+        df = conn.execute(f"from stage_player_shots_by_game where date='{partition_date}' limit 50;").df()
+
+    return MaterializeResult(
+        metadata={
+            "num_players": MetadataValue.int(len(res['player_id'])),
+            "sample": MetadataValue.md(df.to_markdown())
+        }
+    )
+
+@asset(
+    deps=[stage_plays],
+    group_name="update_daily",
+    partitions_def=daily_partition,
+)
+def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    date = context.partition_key
+    sql_query = queries.stage_player_assists_by_game(date)
     context.log.info(sql_query)
 
     with database.get_connection() as conn:
         conn.execute(sql_query)
-        count_players = conn.execute(f"select count(distinct player_id) as players from stage_player_shots_by_game;").fetchone()[0]
-        df = conn.execute("from stage_player_shots_by_game limit 10;").df()
+        count_players = conn.execute("select count(distinct player_id) as players from stage_player_assists_by_game;").fetchone()[0]
+        df = conn.execute("from stage_player_assists_by_game limit 10;").df()
         context.log.info(count_players)
 
     return MaterializeResult(
@@ -523,3 +563,546 @@ def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBR
             "sample": MetadataValue.md(df.to_markdown())
         }
     )
+
+@asset(
+    deps=[stage_player_shots_by_game]
+)
+def html_table_from_stage_player_shots(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    with database.get_connection() as conn:
+        df = conn.execute("from stage_player_shots_by_game limit 100;").df()
+    
+    html = df.to_html()
+    path = os.path.join(storage.filepath, "html")
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, "daily.html"), "w") as f:
+        f.write(html)
+
+    return MaterializeResult(
+        metadata={
+            "count": len(df)
+        }
+    )
+
+@asset(
+    deps=[
+        stage_player_lines, 
+        stage_player_shots_by_game, 
+        stage_players, 
+        stage_game_logs
+    ],
+    partitions_def=daily_partition,
+    group_name="update_daily"
+)
+def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    stage table that will be turned into html report
+    """
+    start_date = os.environ['START_DATE']
+    end_date = os.environ['END_DATE']
+
+    sql_query = queries.insert_table_stage_top_lines(start_date=start_date, end_date=end_date)
+    context.log.info(sql_query)
+
+    with database.get_connection() as conn:
+        conn.execute(sql_query)
+
+    return MaterializeResult(
+        metadata={
+            "query": MetadataValue.md(sql_query)
+        }
+    )
+
+@asset(
+    deps=[stage_top_lines],
+    config_schema={
+        "start_date": str,
+        "end_date": str
+    }
+)
+def top_lines_html_report(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+    """
+    create html report for newsletter
+    """
+    start_date = context.op_config['start_date']
+    end_date = context.op_config['end_date']
+
+    with database.get_connection() as conn:
+        df = conn.execute(f"""
+            select
+                name,
+                date
+            from
+            stage_top_lines
+            where date between '{start_date}' and '{end_date}';
+        """).df()
+
+    html = df.to_html()
+    path = os.path.join(storage.filepath, "top_lines", end_date)
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, "report.html"), "w") as f:
+        f.write(html)
+    
+    return MaterializeResult(
+        metadata={
+            "df": MetadataValue.md(df.to_markdown())
+        }
+    )
+
+@asset(
+    deps=[stage_game_logs]
+)
+def team_net_rating_model(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    use catboost model to do regression on game results
+    """
+
+    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.linear_model import ElasticNet, Ridge
+
+    with database.get_connection() as conn:
+        df = conn.execute("""
+            select
+                game_id,
+                poss,
+                minutes,
+                team_1_id,
+                team_2_id,
+                team_1_pts,
+                team_2_pts
+            from stage_game_logs
+            where (team_2_pts-team_1_pts) is not null;
+    """).df()
+    
+    # Features (team IDs) and target (point differential)
+    categories = sorted(list(set(df.team_1_id.values.tolist()+df.team_2_id.values.tolist())))
+    ohe = OneHotEncoder(categories=[categories], sparse_output=True)
+    all_teams = pandas.concat([df['team_1_id'], df['team_2_id']])
+    ohe.fit(all_teams.values.reshape(-1, 1))
+    encoded_team_1 = ohe.transform(df[['team_1_id']].values)
+    encoded_team_2 = ohe.transform(df[['team_2_id']].values)
+    encoded = (-1*encoded_team_1) + encoded_team_2
+    feature_names = ohe.get_feature_names_out()
+    team_ids = [int(name[3:]) for name in feature_names]
+
+    X = encoded  # Using team IDs as features
+    y = df['team_2_pts']-df['team_1_pts']  # Target: point differential
+
+    context.log.info(f"any nan? {y.isna().any()}")
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Initialize the regressor
+    model = Ridge(alpha=0.1, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    # context.log.info(rmse)
+    # context.log.info(type(rmse))
+    coefficients = model.coef_
+    # context.log.info(coefficients)
+    scores = list(zip(team_ids, coefficients))
+    sorted_team_scores = sorted(scores, key=lambda x: x[1], reverse=True)
+    # context.log.info(sorted_team_scores)
+    rankings_df = pandas.DataFrame.from_records(sorted_team_scores, columns=['id', 'score'])
+    context.log.info(rankings_df.head())
+
+    with database.get_connection() as conn:
+        conn.register("df", rankings_df)
+        query = """
+            SELECT 
+                df.id, 
+                displayName,
+                shortConferenceName,
+                score
+            FROM df
+            JOIN stage_teams st ON df.id = st.id
+        """
+        result_df = conn.execute(query).df()
+
+    return MaterializeResult(
+        metadata={
+            "rmse": MetadataValue.float(float(rmse)),
+            "rankings": MetadataValue.md(result_df.to_markdown()),
+            "num_teams": MetadataValue.int(len(feature_names.tolist()))
+        }
+    )
+
+@asset(
+    deps=[stage_game_logs]
+)
+def team_split_rating_model(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    use catboost model to do regression on game results
+    """
+
+    with database.get_connection() as conn:
+        df = conn.execute("""
+            with combined as 
+            (select
+                game_id,
+                poss,
+                minutes,
+                0.0 as home,
+                'o' || team_1_id as offense,
+                'd' || team_2_id as defense,
+                100.0*team_1_pts/poss as rating
+            from stage_game_logs
+            where team_1_pts is not null
+            union all
+            select
+                game_id,
+                poss,
+                minutes,
+                1.0 as home,
+                'o' || team_2_id as offense,
+                'd' || team_1_id as defense,
+                100.0*team_2_pts/poss as rating
+            from stage_game_logs
+            where team_2_pts is not null)
+            select
+                *
+            from combined
+            order by random();
+    """).df()
+    
+    # Features (team IDs) and target (point differential)
+    ohe_offense = OneHotEncoder(sparse_output=False)
+    ohe_defense = OneHotEncoder(sparse_output=False)
+    encoded_offense = ohe_offense.fit_transform(df[['offense']].values)
+    encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
+    features_offense = ohe_offense.get_feature_names_out()
+    features_defense = ohe_defense.get_feature_names_out()
+    team_ids_offense = [name[4:] for name in features_offense]
+    team_ids_defense = [name[4:] for name in features_defense]
+    context.log.info(df.home)
+    X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
+    # context.log.info(X)
+    y = df['rating']  # Target: point differential
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=42)
+    context.log.info(X_train)
+    # Initialize the regressor
+    alphas = numpy.array([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0])
+    model = RidgeCV(alphas=alphas, cv=5)
+    model.fit(X_train, y_train)
+    best_alpha = model.alpha_
+    y_pred = model.predict(X_test)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    coefficients = model.coef_
+    bias = model.intercept_
+    hca = coefficients[0]
+    oratings = list(zip(team_ids_offense, bias+coefficients[1:len(team_ids_offense)]))
+    dratings = list(zip(team_ids_defense, bias+coefficients[1+len(team_ids_defense):]))
+    ortg_df = pandas.DataFrame.from_records(oratings, columns=['id', 'rating'])
+    drtg_df = pandas.DataFrame.from_records(dratings, columns=['id', 'rating'])
+
+    with database.get_connection() as conn:
+        conn.register("ortg_df", ortg_df)
+        conn.register("drtg_df", drtg_df)
+        query = """
+            SELECT 
+                st.id, 
+                displayName,
+                shortConferenceName,
+                o.rating-d.rating as net,
+                o.rating as ortg,
+                exp(2 * ((o.rating / avg(o.rating) over ()) - 1)) as ortgn,
+                d.rating as drtg,
+                exp(2 * ((d.rating / avg(d.rating) over ()) - 1)) as drtgn
+            FROM ortg_df o
+            JOIN stage_teams st ON o.id=st.id
+            JOIN drtg_df d on d.id=st.id
+        """
+        result_df = conn.execute(query).df()
+
+    return MaterializeResult(
+        metadata={
+            "rmse": MetadataValue.float(float(rmse)),
+            "bias": MetadataValue.float(float(bias)),
+            "alpha": MetadataValue.float(float(best_alpha)),
+            "hca": MetadataValue.float(float(hca)),
+            "num_teams_offense": MetadataValue.int(len(features_offense.tolist())),
+            "top25": MetadataValue.md(result_df.sort_values(by='net', ascending=False).head(25).to_markdown()),
+            "top25_off": MetadataValue.md(result_df.sort_values(by='ortg', ascending=False).head(25).to_markdown()),
+            "top25_def": MetadataValue.md(result_df.sort_values(by='drtg', ascending=True).head(25).to_markdown()),
+        }
+    )
+
+def build_stage_box_stat_adjustment_factors(stat: Literal["tov", "fta", "ftm", "fga", "fg3a", "fg3m", 
+                                                          "orb", "ast", "stl", "blk", "drb"],
+                                       higher_is_better: bool=True,
+                                       offense: bool=True,
+                                       alphas: list[float]=[0.1, 1.0, 10.0]) -> AssetsDefinition:
+    """
+    factory function for building models for a stat in stage_game_logs
+    """
+    @asset(
+        deps=[stage_game_logs],
+        name=f"adj_{stat}_per_100_model",
+        group_name="box_stat_models",
+        description=f"model for predicting rate of {stat} per 100 possessions between two teams"
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+        """
+        use catboost model to do regression on game results
+        """
+        team_1_or_2 = lambda offense: 1 if offense else 2
+
+        with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+            with database.get_connection() as conn:
+                df = conn.execute(f"""
+                    with combined as 
+                    (select
+                        game_id,
+                        poss,
+                        0.0 as home,
+                        'o' || team_1_id as offense,
+                        'd' || team_2_id as defense,
+                        100.0*team_{team_1_or_2(offense)}_stats.{stat}/poss as rating
+                    from stage_game_logs
+                    where team_1_pts is not null
+                    union all
+                    select
+                        game_id,
+                        poss,
+                        1.0 as home,
+                        'o' || team_2_id as offense,
+                        'd' || team_1_id as defense,
+                        100.0*team_{team_1_or_2(not offense)}_stats.{stat}/poss as rating
+                    from stage_game_logs
+                    where team_2_pts is not null)
+                    select
+                        *
+                    from combined
+            """).df()
+        
+        # Features (team IDs) and target (point differential)
+        ohe_offense = OneHotEncoder(sparse_output=False)
+        ohe_defense = OneHotEncoder(sparse_output=False)
+        encoded_offense = ohe_offense.fit_transform(df[['offense']].values)
+        encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
+        features_offense = ohe_offense.get_feature_names_out()
+        features_defense = ohe_defense.get_feature_names_out()
+        team_ids_offense = [name[4:] for name in features_offense]
+        team_ids_defense = [name[4:] for name in features_defense]
+        context.log.info(df.home)
+        X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
+        y = df['rating']  # Target: point differential
+
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=42)
+        context.log.info(X_train)
+        # Initialize the regressor
+        model = RidgeCV(alphas=numpy.array(alphas), cv=5)
+        model.fit(X_train, y_train)
+        best_alpha = model.alpha_
+        y_pred = model.predict(X_test)
+        rmse = mean_squared_error(y_test, y_pred, squared=False)
+        coefficients = model.coef_
+        bias = model.intercept_
+        hca = coefficients[0]
+        oratings = list(zip(team_ids_offense, bias+coefficients[1:len(team_ids_offense)]))
+        dratings = list(zip(team_ids_defense, bias+coefficients[1+len(team_ids_defense):]))
+        ortg_df = pandas.DataFrame.from_records(oratings, columns=['id', 'rating'])
+        drtg_df = pandas.DataFrame.from_records(dratings, columns=['id', 'rating'])
+
+        with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+            with database.get_connection() as conn:
+                conn.register("ortg_df", ortg_df)
+                conn.register("drtg_df", drtg_df)
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS stage_box_stat_adjustment_factors (
+                    team_id INT,
+                    stat VARCHAR,
+                    ortg DOUBLE,
+                    drtg DOUBLE,
+                    PRIMARY KEY (team_id, stat)
+                    );
+                """)
+
+                query = f"""
+                    INSERT OR IGNORE INTO stage_box_stat_adjustment_factors 
+                    (
+                    SELECT 
+                        st.id as team_id, 
+                        '{stat}' as stat,
+                        o.rating / avg(o.rating) over () as ortg,
+                        d.rating / avg(d.rating) over () as drtg
+                    FROM ortg_df o
+                    JOIN stage_teams st ON o.id=st.id
+                    JOIN drtg_df d on d.id=st.id
+                    )
+                    returning team_id, stat, ortg, drtg;
+                """
+                result_df = conn.execute(query).df()
+
+        return MaterializeResult(
+            metadata={
+                "rmse": MetadataValue.float(float(rmse)),
+                "bias": MetadataValue.float(float(bias)),
+                "alpha": MetadataValue.float(float(best_alpha)),
+                "hca": MetadataValue.float(float(hca)),
+                "num_teams_offense": MetadataValue.int(len(features_offense.tolist())),
+                "top_off": MetadataValue.md(result_df.sort_values(by='ortg', ascending=not higher_is_better).head(25).to_markdown()),
+                "top_def": MetadataValue.md(result_df.sort_values(by='drtg', ascending=higher_is_better).head(25).to_markdown()),
+            }
+        )
+    
+    return _asset
+
+alphas = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+tov_model = build_stage_box_stat_adjustment_factors(stat="tov", higher_is_better=False, alphas=alphas)
+ast_model = build_stage_box_stat_adjustment_factors(stat="ast", alphas=alphas)
+fta_model = build_stage_box_stat_adjustment_factors(stat="fta", alphas=alphas)
+ftm_model = build_stage_box_stat_adjustment_factors(stat="ftm", alphas=alphas)
+fga_model = build_stage_box_stat_adjustment_factors(stat="fga", alphas=alphas)
+fg3a_model = build_stage_box_stat_adjustment_factors(stat="fg3a", alphas=alphas)
+fg3m_model = build_stage_box_stat_adjustment_factors(stat="fg3m", alphas=alphas)
+orb_model = build_stage_box_stat_adjustment_factors(stat="orb", alphas=alphas)
+drb_model = build_stage_box_stat_adjustment_factors(stat="drb", offense=False, alphas=alphas)
+stl_model = build_stage_box_stat_adjustment_factors(stat="stl", offense=False, alphas=alphas)
+blk_model = build_stage_box_stat_adjustment_factors(stat="blk", offense=False, alphas=alphas)
+
+def build_stage_shot_type_adjustment_factors(shot: Literal["ast_dunk", "unast_dunk", "miss_dunk", 
+                                                           "ast_layup", "unast_layup", "miss_layup", 
+                                                           "ast_mid", "unast_mid", "miss_mid",
+                                                           "ast_3pt", "unast_3pt", "miss_3pt",
+                                                           "ast_tip", "unast_tip", "miss_tip"],
+                                       higher_is_better: bool=True,
+                                       alphas: list[float]=[0.1, 1.0, 10.0]) -> AssetsDefinition:
+    """
+    factory function for building models for a shot type in stage_player_shots_by_game
+    """
+    @asset(
+        deps=[stage_game_logs, stage_player_shots_by_game],
+        name=f"adj_{shot}_per_100_model",
+        group_name="shot_type_models",
+        description=f"model for predicting rate of {shot} per 100 possessions between two teams"
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+        """
+        use catboost model to do regression on game results
+        """
+
+        with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+            with database.get_connection() as conn:
+                df = conn.execute(f"""
+                    with shots as (
+                        select
+                            game_id,
+                            'o' || team_id as offense,
+                            'd' || opp_id as defense,
+                            home,
+                            sum({shot}) as total
+                        from stage_player_shots_by_game
+                        group by ALL
+                    ),
+                    games as (
+                        select
+                            game_id as gid,
+                            poss
+                        from stage_game_logs
+                        where poss > 0
+                    )
+                    select
+                        game_id,
+                        poss,
+                        case when home is true then 1.0 else 0.0 end as home,
+                        offense,
+                        defense,
+                        100.0*total/poss as rating
+                    from shots s join games g on
+                    s.game_id=g.gid
+            """).df()
+        
+        # Features (team IDs) and target (point differential)
+        ohe_offense = OneHotEncoder(sparse_output=False)
+        ohe_defense = OneHotEncoder(sparse_output=False)
+        encoded_offense = ohe_offense.fit_transform(df[['offense']].values)
+        encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
+        features_offense = ohe_offense.get_feature_names_out()
+        features_defense = ohe_defense.get_feature_names_out()
+        team_ids_offense = [name[4:] for name in features_offense]
+        team_ids_defense = [name[4:] for name in features_defense]
+        context.log.info(df.home)
+        X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
+        y = df['rating']  # Target: point differential
+
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=42)
+        context.log.info(X_train)
+        # Initialize the regressor
+        model = RidgeCV(alphas=numpy.array(alphas), cv=5)
+        model.fit(X_train, y_train)
+        best_alpha = model.alpha_
+        y_pred = model.predict(X_test)
+        rmse = mean_squared_error(y_test, y_pred, squared=False)
+        coefficients = model.coef_
+        bias = model.intercept_
+        hca = coefficients[0]
+        oratings = list(zip(team_ids_offense, bias+coefficients[1:len(team_ids_offense)]))
+        dratings = list(zip(team_ids_defense, bias+coefficients[1+len(team_ids_defense):]))
+        ortg_df = pandas.DataFrame.from_records(oratings, columns=['id', 'rating'])
+        drtg_df = pandas.DataFrame.from_records(dratings, columns=['id', 'rating'])
+
+        with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+            with database.get_connection() as conn:
+                conn.register("ortg_df", ortg_df)
+                conn.register("drtg_df", drtg_df)
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS stage_shot_type_adjustment_factors (
+                    team_id INT,
+                    stat VARCHAR,
+                    ortg DOUBLE,
+                    drtg DOUBLE,
+                    PRIMARY KEY (team_id, stat)
+                    );
+                """)
+
+                query = f"""
+                    INSERT OR IGNORE INTO stage_shot_type_adjustment_factors 
+                    (
+                    SELECT 
+                        st.id as team_id, 
+                        '{shot}' as stat,
+                        o.rating / avg(o.rating) over () as ortg,
+                        d.rating / avg(d.rating) over () as drtg
+                    FROM ortg_df o
+                    JOIN stage_teams st ON o.id=st.id
+                    JOIN drtg_df d on d.id=st.id
+                    )
+                    returning team_id, stat, ortg, drtg;
+                """
+                result_df = conn.execute(query).df()
+
+        return MaterializeResult(
+            metadata={
+                "rmse": MetadataValue.float(float(rmse)),
+                "bias": MetadataValue.float(float(bias)),
+                "alpha": MetadataValue.float(float(best_alpha)),
+                "hca": MetadataValue.float(float(hca)),
+                "num_teams_offense": MetadataValue.int(len(features_offense.tolist())),
+                "top_off": MetadataValue.md(result_df.sort_values(by='ortg', ascending=not higher_is_better).head(25).to_markdown()),
+                "top_def": MetadataValue.md(result_df.sort_values(by='drtg', ascending=higher_is_better).head(25).to_markdown()),
+            }
+        )
+    
+    return _asset
+
+ast_3pt = build_stage_shot_type_adjustment_factors(shot="ast_3pt", alphas=alphas)
+unast_3pt = build_stage_shot_type_adjustment_factors(shot="unast_3pt", alphas=alphas)
+miss_3pt = build_stage_shot_type_adjustment_factors(shot="miss_3pt", higher_is_better=False, alphas=alphas)
+ast_dunk = build_stage_shot_type_adjustment_factors(shot="ast_dunk", alphas=alphas)
+unast_dunk = build_stage_shot_type_adjustment_factors(shot="unast_dunk", alphas=alphas)
+miss_dunk = build_stage_shot_type_adjustment_factors(shot="miss_dunk", higher_is_better=False, alphas=alphas)
+ast_layup = build_stage_shot_type_adjustment_factors(shot="ast_layup", alphas=alphas)
+unast_layup = build_stage_shot_type_adjustment_factors(shot="unast_layup", alphas=alphas)
+miss_layup = build_stage_shot_type_adjustment_factors(shot="miss_layup", higher_is_better=False, alphas=alphas)
+ast_mid = build_stage_shot_type_adjustment_factors(shot="ast_mid", alphas=alphas)
+unast_mid = build_stage_shot_type_adjustment_factors(shot="unast_mid", alphas=alphas)
+miss_mid = build_stage_shot_type_adjustment_factors(shot="miss_mid", higher_is_better=False, alphas=alphas)
+ast_tip = build_stage_shot_type_adjustment_factors(shot="ast_tip", alphas=alphas)
+unast_tip = build_stage_shot_type_adjustment_factors(shot="unast_tip", alphas=alphas)
+miss_tip = build_stage_shot_type_adjustment_factors(shot="miss_tip", higher_is_better=False, alphas=alphas)

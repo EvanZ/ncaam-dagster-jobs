@@ -6,7 +6,7 @@ setup(
     install_requires=[
         "dagster",
         "dagster-cloud",
-        "loguru",
+        "sklearn"
      ],
     extras_require={"dev": ["dagster-webserver", "pytest"]},
 )
