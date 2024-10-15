@@ -26,9 +26,9 @@ import fasteners
 import numpy
 import pandas
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.linear_model import RidgeCV
+from jinja2 import Environment, FileSystemLoader
 
 from . import queries
 from .constants import (
@@ -38,10 +38,12 @@ from .constants import (
     GAME_SUMMARY_URL_TEMPLATE, 
     TEAMS_URL, 
     CONFERENCES_URL,
-    KENPOM_URL
+    PYTHON,
+    DUCKDB,
+    SKLEARN
     )
 from ..partitions import daily_partition
-from ..resources import LocalFileStorage
+from ..resources import LocalFileStorage, JinjaTemplates
 from ..utils.utils import fetch_data
 
 warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
@@ -70,38 +72,39 @@ def create_drop_table_op(table_name: str):
 
     return drop_table_op
 
-@asset(
-    group_name="update_manually"
-)
-def stage_kenpom(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
-    """
-    stage latest kenpom rankings
-    """
-    path = os.path.join(storage.filepath, "kenpom", "kenpom.csv")
-    context.log.info(path)
+# @asset(
+#     group_name="update_manually"
+# )
+# def stage_kenpom(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+#     """
+#     stage latest kenpom rankings
+#     """
+#     path = os.path.join(storage.filepath, "kenpom", "kenpom.csv")
+#     context.log.info(path)
 
-    with database.get_connection() as conn:
-        conn.execute("""
-                     create table if not exists stage_kenpom (
-                        rank INT,
-                        team STRING PRIMARY KEY,
-                        ortg DOUBLE,
-                        drtg DOUBLE,
-                        year INT
-                     );
-                     """)
-        df = conn.execute(queries.insert_table_stage_kenpom(path)).df()        
+#     with database.get_connection() as conn:
+#         conn.execute("""
+#                      create table if not exists stage_kenpom (
+#                         rank INT,
+#                         team STRING PRIMARY KEY,
+#                         ortg DOUBLE,
+#                         drtg DOUBLE,
+#                         year INT
+#                      );
+#                      """)
+#         df = conn.execute(queries.insert_table_stage_kenpom(path)).df()        
  
-    return MaterializeResult(
-        metadata={
-            "path": path,
-            "df": MetadataValue.md(df.to_markdown()),
-            "num_teams": MetadataValue.int(len(df))
-        }
-    )
+#     return MaterializeResult(
+#         metadata={
+#             "path": path,
+#             "df": MetadataValue.md(df.to_markdown()),
+#             "num_teams": MetadataValue.int(len(df))
+#         }
+#     )
 
 @asset(
-    group_name="update_annual"
+    group_name="update_annual",
+    compute_kind=PYTHON
 )
 def teams_file(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -127,7 +130,8 @@ def teams_file(context: AssetExecutionContext, database: DuckDBResource, storage
     )
 
 @asset(
-    group_name="update_annual"
+    group_name="update_annual",
+    compute_kind=PYTHON
 )
 def conferences_file(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -154,7 +158,8 @@ def conferences_file(context: AssetExecutionContext, database: DuckDBResource, s
 
 @asset(
     deps=[conferences_file],
-    group_name="update_annual"    
+    group_name="update_annual",
+    compute_kind=DUCKDB 
 )
 def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -180,7 +185,8 @@ def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, 
 
 @asset(
     deps=[conferences_file],
-    group_name="update_annual"    
+    group_name="update_annual",
+    compute_kind=DUCKDB  
 )
 def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -208,7 +214,8 @@ def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storag
 @asset(
         deps=[stage_teams],
         group_name="update_annual",
-        config_schema={"season": int, "ids": [int]}
+        config_schema={"season": int, "ids": [int]},
+        compute_kind=PYTHON
 )
 def rosters_files(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -250,6 +257,7 @@ def rosters_files(context: AssetExecutionContext, database: DuckDBResource, stor
 
 @asset(
     group_name="update_daily",
+    compute_kind=PYTHON,
     partitions_def=daily_partition,
     retry_policy=RetryPolicy(
             max_retries=5,        # Maximum number of retries
@@ -325,6 +333,7 @@ def daily_scoreboard_file(context: AssetExecutionContext, database: DuckDBResour
             delay=15              # Delay between retries in seconds
         ),
     group_name="update_daily",
+    compute_kind=PYTHON,
     partitions_def=daily_partition
 )
 def game_summary_files(context: AssetExecutionContext, storage: LocalFileStorage, daily_scoreboard_file: pandas.DataFrame) -> MaterializeResult:
@@ -354,6 +363,7 @@ def game_summary_files(context: AssetExecutionContext, storage: LocalFileStorage
 
 @asset(
         group_name="udpate_annual",
+        compute_kind=DUCKDB,
         deps=[rosters_files]
 )
 def stage_players(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
@@ -380,6 +390,7 @@ def stage_players(context: AssetExecutionContext, database: DuckDBResource, stor
     deps=[daily_scoreboard_file],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_daily_scoreboard(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -410,6 +421,7 @@ def stage_daily_scoreboard(context: AssetExecutionContext, database: DuckDBResou
     deps=[game_summary_files, stage_daily_scoreboard],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_game_logs(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -439,6 +451,7 @@ def stage_game_logs(context: AssetExecutionContext, database: DuckDBResource, st
     deps=[game_summary_files],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_player_lines(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -467,6 +480,7 @@ def stage_player_lines(context: AssetExecutionContext, database: DuckDBResource,
     deps=[game_summary_files],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_plays(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -491,7 +505,8 @@ def stage_plays(context: AssetExecutionContext, database: DuckDBResource, storag
     )
 
 @asset(
-    group_name="update_annual"
+    group_name="update_annual",
+    compute_kind=DUCKDB
 )
 def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
@@ -523,6 +538,7 @@ def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource
     deps=[stage_plays],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     partition_date = context.partition_key
@@ -545,6 +561,7 @@ def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBR
     deps=[stage_plays],
     group_name="update_daily",
     partitions_def=daily_partition,
+    compute_kind=DUCKDB
 )
 def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     date = context.partition_key
@@ -565,7 +582,8 @@ def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckD
     )
 
 @asset(
-    deps=[stage_player_shots_by_game]
+    deps=[stage_player_shots_by_game],
+    compute_kind=PYTHON
 )
 def html_table_from_stage_player_shots(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     with database.get_connection() as conn:
@@ -584,72 +602,8 @@ def html_table_from_stage_player_shots(context: AssetExecutionContext, database:
     )
 
 @asset(
-    deps=[
-        stage_player_lines, 
-        stage_player_shots_by_game, 
-        stage_players, 
-        stage_game_logs
-    ],
-    partitions_def=daily_partition,
-    group_name="update_daily"
-)
-def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
-    """
-    stage table that will be turned into html report
-    """
-    start_date = os.environ['START_DATE']
-    end_date = os.environ['END_DATE']
-
-    sql_query = queries.insert_table_stage_top_lines(start_date=start_date, end_date=end_date)
-    context.log.info(sql_query)
-
-    with database.get_connection() as conn:
-        conn.execute(sql_query)
-
-    return MaterializeResult(
-        metadata={
-            "query": MetadataValue.md(sql_query)
-        }
-    )
-
-@asset(
-    deps=[stage_top_lines],
-    config_schema={
-        "start_date": str,
-        "end_date": str
-    }
-)
-def top_lines_html_report(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
-    """
-    create html report for newsletter
-    """
-    start_date = context.op_config['start_date']
-    end_date = context.op_config['end_date']
-
-    with database.get_connection() as conn:
-        df = conn.execute(f"""
-            select
-                name,
-                date
-            from
-            stage_top_lines
-            where date between '{start_date}' and '{end_date}';
-        """).df()
-
-    html = df.to_html()
-    path = os.path.join(storage.filepath, "top_lines", end_date)
-    os.makedirs(path, exist_ok=True)
-    with open(os.path.join(path, "report.html"), "w") as f:
-        f.write(html)
-    
-    return MaterializeResult(
-        metadata={
-            "df": MetadataValue.md(df.to_markdown())
-        }
-    )
-
-@asset(
-    deps=[stage_game_logs]
+    deps=[stage_game_logs],
+    compute_kind=SKLEARN
 )
 def team_net_rating_model(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     """
@@ -729,7 +683,8 @@ def team_net_rating_model(context: AssetExecutionContext, database: DuckDBResour
     )
 
 @asset(
-    deps=[stage_game_logs]
+    deps=[stage_game_logs],
+    compute_kind=SKLEARN
 )
 def team_split_rating_model(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     """
@@ -842,6 +797,7 @@ def build_stage_box_stat_adjustment_factors(stat: Literal["tov", "fta", "ftm", "
         deps=[stage_game_logs],
         name=f"adj_{stat}_per_100_model",
         group_name="box_stat_models",
+        compute_kind=SKLEARN,
         description=f"model for predicting rate of {stat} per 100 possessions between two teams"
     )
     def _asset(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
@@ -979,6 +935,7 @@ def build_stage_shot_type_adjustment_factors(shot: Literal["ast_dunk", "unast_du
         deps=[stage_game_logs, stage_player_shots_by_game],
         name=f"adj_{shot}_per_100_model",
         group_name="shot_type_models",
+        compute_kind=SKLEARN,
         description=f"model for predicting rate of {shot} per 100 possessions between two teams"
     )
     def _asset(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
@@ -1106,3 +1063,113 @@ miss_mid = build_stage_shot_type_adjustment_factors(shot="miss_mid", higher_is_b
 ast_tip = build_stage_shot_type_adjustment_factors(shot="ast_tip", alphas=alphas)
 unast_tip = build_stage_shot_type_adjustment_factors(shot="unast_tip", alphas=alphas)
 miss_tip = build_stage_shot_type_adjustment_factors(shot="miss_tip", higher_is_better=False, alphas=alphas)
+
+@asset(
+    deps=[
+        stage_player_lines, 
+        stage_player_shots_by_game, 
+        stage_players, 
+        tov_model,
+        ast_model,
+        blk_model,
+        drb_model,
+        fga_model,
+        fta_model,
+        ftm_model,
+        orb_model,
+        stl_model,
+        fg3a_model,
+        fg3m_model,
+        ast_3pt,
+        ast_dunk,
+        ast_layup,
+        ast_mid,
+        ast_tip,
+        unast_3pt,
+        unast_dunk,
+        unast_layup,
+        unast_mid,
+        unast_tip,
+        miss_3pt,
+        miss_dunk,
+        miss_layup,
+        miss_mid,
+        miss_tip
+    ],
+    partitions_def=daily_partition,
+    group_name="update_daily",
+    compute_kind=DUCKDB
+)
+def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    stage table that will be turned into html report
+    """
+    partition_date = context.partition_key
+    context.log.info(f'partition_date: {partition_date}')
+
+    sql_query = queries.insert_table_stage_top_lines(date=partition_date)
+    context.log.info(sql_query)
+
+    with database.get_connection() as conn:
+        context.log.info(queries.create_table_stage_top_lines())
+        conn.execute(queries.create_table_stage_top_lines())
+        df = conn.execute(sql_query).df()
+
+    return MaterializeResult(
+        metadata={
+            "query": MetadataValue.md(sql_query),
+            "num_players": MetadataValue.int(len(df['player_id'])),
+            "top_10": MetadataValue.md(df.head(10).to_markdown())
+        }
+    )
+
+def build_top_lines_html_table(exp: list[int], top_n: int=50, name: str="report", color: str="#338bff") -> AssetsDefinition:
+    @asset(
+        name=f"top_lines_html_table_for_{name}",
+        deps=[stage_top_lines],
+        config_schema={
+            "start_date": str,
+            "end_date": str
+        },
+        compute_kind=PYTHON
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
+        """
+        create html report for newsletter
+        """
+        start_date = context.op_config['start_date']
+        end_date = context.op_config['end_date']
+
+        with database.get_connection() as conn:
+            df = conn.execute(query=queries.top_lines_report_query(
+                start_date=start_date,
+                end_date=end_date,
+                exp=exp,
+                top_n=top_n
+            )).df()
+
+        # Set up Jinja2 environment to load templates from the current directory
+        env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
+        player_card_template = env.get_template("player_cards_template.html")
+
+        # Convert DataFrame to a list of dictionaries
+        players = df.to_dict(orient="records")
+
+        # Render the template with player data
+        html_content = player_card_template.render(players=players)
+        path = os.path.join(storage.filepath, "top_lines", end_date)
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, f"{name}.html"), "w") as f:
+            f.write(html_content)
+        
+        return MaterializeResult(
+            metadata={
+                "df": MetadataValue.md(df.to_markdown())
+            }
+        )
+    
+    return _asset
+
+freshmen_tl = build_top_lines_html_table(exp=[0,1], name="freshmen", color="#15aa4e")
+sophomores_tl = build_top_lines_html_table(exp=[2], name="sophomores", color="#23b84b")
+upperclass_tl = build_top_lines_html_table(exp=[3,4,5], name="upperclassmen")

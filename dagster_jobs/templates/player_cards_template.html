@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px lightgrey;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 8px 16px darkgray;
+        }
+        .card-content {
+            padding: 15px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .class-rank {
+            position: relative;
+            top: -10px;
+            left: -10px;
+            min-width: 40px;
+            color: black;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .player-name {
+            font-weight: bold;
+            margin: 0;
+        }
+        .player-bio {
+            font-size: 14px;
+            color: gray;
+        }
+        .game-info {
+            display: flex;
+            margin-top: 10px;
+            color: #111;
+            font-size: 16px;
+        }
+        .stats {
+            font-size: 14px;
+            font-weight: bolder;
+            font-family: 'Courier New', Courier, monospace;
+            color: ghostwhite;
+            text-shadow: 0 0 10px darkgray;
+            margin-top: 5px;
+            padding: 5px;
+            display: flex;
+            justify-content: space-between;
+            border-radius: 5px;
+            border: solid 1px black;
+            background-color: darkgreen;
+        }
+        .btn-link {
+            text-decoration: none;
+        }
+        .player-link {
+            text-decoration: none;
+        }
+        .player-rank {
+            display: inline-block;
+            vertical-align: bottom;
+            white-space: nowrap;
+            color: gray;
+            font-size: 16px;
+        }    
+        .player-row {
+            display: flex;
+        }
+        .shadow-headshot {
+            width: 150px;
+            height: auto;
+            filter: drop-shadow(-5px -5px 10px darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        .team-logo {
+            width: 125px;
+            height: auto;
+            display: inline-block;
+        }
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 430px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                font-size: 14px;
+            }
+            .shadow-headshot {
+                width: 100px;
+            }
+            .team-logo {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        {% for player in players %}
+        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" class="btn-link">
+            <div class="card">
+                <div class="card-content">
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ player.class_rank }}
+                        </div>
+                        <div class="player-rank">
+                            season rank: #{{ player.game_rank }} of {{ player.games }} {{ player.notable }}
+                        </div>    
+                    </div>
+                    <div class="card-header">
+                        <div class="player-bio">
+                            <img src={{ player.headshot_href }} class="shadow-headshot">
+                            <br>
+                            #{{ player.jersey }}
+                            {{ player.display_name }}
+                            ({{ player.experience_abbreviation }})
+                            <br>
+                            {{ player.display_height }}
+                            {{ player.display_weight }}
+                            <br>
+                            {{ player.position_abbreviation }} {{ player.team_location}} ({{ player.team_conf }})
+                        </div>
+                        <div>
+                            <img src={{ player.team_logo}} class="team-logo">
+                        </div>
+                    </div>
+                    <div class="game-info">
+                        {{ player.date.strftime('%-m/%-d') }}
+                        {% if player.starter %}Started in {% else %}Came off bench in {% endif %}
+                        {% if (player.team_pts-player.opp_pts) > 0 %}win{% else %}loss{% endif %}
+                        {% if player.home %} vs {% else %} at {% endif %}
+                        {{ player.opp_location }}
+                        {{ player.team_pts }} - {{ player.opp_pts }} 
+                        <br>
+                    </div>
+                    <div class="stats">
+                        <div>{{ player.game }}<br>{{ player.usg }}</div>
+                        <div>{{ player.box }}</div>
+                        <div>{{ player.shots }}</div>
+                        <div>{{ player.ez }}</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</body>
+</html>

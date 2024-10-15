@@ -12,3 +12,10 @@ class LocalFileStorage(ConfigurableResource):
 download_base_path = LocalFileStorage(
     filepath=EnvVar("LOCAL_STORAGE_PATH")
 )
+
+class JinjaTemplates(ConfigurableResource):
+    searchpath: str = Field(description="path to search for jinja templates")
+
+jinja_templates_path= JinjaTemplates(
+    searchpath=EnvVar("JINJA_TEMPLATES_PATH")
+)

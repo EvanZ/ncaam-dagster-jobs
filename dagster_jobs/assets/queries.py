@@ -622,22 +622,6 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
         returning play_id;
     """
 
-def insert_table_stage_kenpom(path: str) -> str:
-    """
-    query to insert values from kenpom file
-    """
-    return f"""
-    insert or ignore into stage_kenpom
-    select
-        rank,
-        team,
-        ortg,
-        drtg,
-        year
-    from read_csv('{path}')
-    returning rank, team;
-    """
-
 def create_table_stage_player_shots_by_game() -> str:
     """
     for tracking shot types (dunks, layups, etc)
@@ -746,105 +730,331 @@ def stage_player_assists_by_game(date: str) -> str:
     group by ALL;
     """
 
-def insert_table_stage_top_lines(start_date: str, end_date: str) -> str:
+def create_table_stage_top_lines() -> str:
+    """
+    table for storing daily player stats that will be used to create Top Lines reports
+    """
     return f"""
-    create or replace table stage_top_lines as
+        create table if not exists stage_top_lines (
+            player_id INT,
+            name VARCHAR,
+            years TINYINT,
+            game_id INT,
+            date DATE,
+            team_id INT,
+            opp_id INT,
+            home BOOLEAN,
+            starter BOOLEAN,
+            minutes INT,
+            stats STRUCT(
+                stl INT,
+                blk INT,
+                fgm INT,
+                fga INT,
+                fg3m INT,
+                fg3a INT,
+                fg2a INT,
+                fg2m INT,
+                tov INT,
+                ast INT,
+                fta INT,
+                ftm INT,
+                drb INT,
+                orb INT
+            ),
+            shots STRUCT(
+                ast_tip INT,
+                unast_tip INT,
+                miss_tip INT,
+                ast_dunk INT,
+                unast_dunk INT,
+                miss_dunk INT,
+                ast_layup INT,
+                unast_layup INT,
+                miss_layup INT,
+                ast_mid INT,
+                unast_mid INT,
+                miss_mid INT,
+                ast_3pt INT,
+                unast_3pt INT,
+                miss_3pt INT
+            ),
+            ez DOUBLE,
+            PRIMARY KEY (game_id, player_id)            
+        );
+    """
+
+def insert_table_stage_top_lines(date: str) -> str:
+    return f"""
+    insert or ignore into stage_top_lines
     with lines as (
+            select
+                player_id,
+                name,
+                game_id,
+                date,
+                opp_id,
+                team_id,
+                home,
+                starter,
+                stats.minutes,
+                stats.fgm,
+                stats.fga,
+                stats.fg3m,
+                stats.fg3a,
+                stats.ftm,
+                stats.fta,
+                stats.orb,
+                stats.drb,
+                stats.reb,
+                stats.ast,
+                stats.stl,
+                stats.blk,
+                stats.tov,
+                stats.pf,
+                stats.pts
+            from stage_player_lines
+        ),
+        players as (
+            select
+                id,
+                experience_years as years
+            from stage_players
+        ),
+        team_adj as (
+        pivot
+            (select
+                team_id,
+                stat,
+                ortg,
+                drtg
+            from stage_box_stat_adjustment_factors
+            union all
+            select
+                team_id,
+                stat,
+                ortg,
+                drtg
+            from stage_shot_type_adjustment_factors)
+        on stat using any_value(ortg) as ortg, any_value(drtg) as drtg
+        group by team_id
+        ),
+        opp_adj as (
+            pivot
+            (select
+                team_id,
+                stat,
+                ortg,
+                drtg
+            from stage_box_stat_adjustment_factors
+            union all
+            select
+                team_id,
+                stat,
+                ortg,
+                drtg
+            from stage_shot_type_adjustment_factors)
+        on stat using any_value(ortg) as ortg, any_value(drtg) as drtg
+        group by team_id
+        )
         select
+            l.player_id,
+            name,
+            years,
+            l.game_id,
+            l.date,
+            l.team_id,
+            l.opp_id,
+            l.home,
+            starter,
+            l.minutes,
+            struct_pack(
+                stl,
+                blk,
+                fgm,
+                fga,
+                fg3m,
+                fg3a,
+                fg2a:=fga-fg3a,
+                fg2m:=fgm-fg3m,
+                tov,
+                ast,
+                fta,
+                ftm,
+                drb,
+                orb
+            ) as stats,
+            struct_pack(
+                ast_tip,
+                unast_tip,
+                miss_tip,
+                ast_dunk,
+                unast_dunk,
+                miss_dunk,
+                ast_layup,
+                unast_layup,
+                miss_layup,
+                ast_mid,
+                unast_mid,
+                miss_mid,
+                ast_3pt,
+                unast_3pt,
+                miss_3pt
+            ) as shots,
+            round(
+                0.6*(orb/(ta.orb_ortg*oa.orb_drtg)) 
+                + 0.3*(drb/(ta.drb_drtg*oa.drb_ortg)) 
+                + 1.0*(stl/(ta.stl_drtg*oa.stl_ortg))
+                + 0.7*(blk/(ta.blk_drtg*oa.blk_ortg)) 
+                + 0.3*(ast_dunk/(ta.ast_dunk_ortg*oa.ast_dunk_drtg) 
+                    + ast_mid/(ta.ast_mid_ortg*oa.ast_mid_drtg) 
+                    + ast_layup/(ta.ast_layup_ortg*oa.ast_layup_drtg)) 
+                + 1.0*(unast_dunk/(ta.unast_dunk_ortg*oa.unast_dunk_drtg) 
+                    + unast_layup/(ta.unast_layup_ortg*oa.unast_layup_drtg) 
+                    + unast_mid/(ta.unast_mid_ortg*oa.unast_mid_drtg)
+                    + unast_tip) 
+                + 2.0*unast_3pt/(ta.unast_3pt_ortg*oa.unast_3pt_drtg) 
+                + 1.3*ast_3pt /(ta.ast_3pt_ortg*oa.ast_3pt_drtg)
+                + (-0.7)*(miss_tip  
+                    + miss_dunk/(ta.miss_dunk_ortg*oa.miss_dunk_drtg)
+                    + miss_layup/(ta.miss_layup_ortg*oa.miss_layup_drtg)
+                    + miss_dunk/(ta.miss_mid_ortg*oa.miss_mid_drtg)
+                    + miss_3pt/(ta.miss_3pt_ortg*oa.miss_3pt_drtg)) 
+                + 0.7*ast / (ta.ast_ortg*oa.ast_drtg)
+                + 0.5*ftm
+                - 0.5*(fta-ftm) 
+                + 0.1*fta / (ta.fta_ortg*oa.fta_drtg)
+                + 0.1*(fga/(ta.fga_ortg*oa.fga_drtg) 
+                    - fg3a/(ta.fg3a_ortg*oa.fg3a_drtg)) 
+                + 0.2*fg3a / (ta.fg3a_ortg*oa.fg3a_drtg)
+                - 0.8*(tov/(ta.tov_ortg*oa.tov_drtg))
+            , 3) as ez
+        from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
+        and l.player_id=s.player_id 
+        join team_adj ta on l.team_id=ta.team_id
+        join opp_adj oa on l.opp_id=oa.team_id
+        join players p on p.id=l.player_id        
+        where l.date='{date}'
+        order by ez desc
+        returning player_id, name, years, game_id, ez;
+    """
+
+def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: int) -> str:
+    """
+    build the top lines html report query
+    """
+    return f"""
+    with games as (
+        from stage_top_lines
+        where years in ({', '.join(map(str, exp))})
+        and date between '{start_date}' and '{end_date}'
+        order by ez desc
+        limit {top_n}
+    ),
+    metrics as (
+        select 
             player_id,
             game_id,
-            date,
-            opp_id,
-            team_id,
-            home,
-            name,
-            player_url,
-            img_url,
-            starter,
-            jersey,
-            stats.minutes,
-            stats.fgm,
-            stats.fga,
-            stats.fg3m,
-            stats.fg3a,
-            stats.ftm,
-            stats.fta,
-            stats.orb,
-            stats.drb,
-            stats.reb,
-            stats.ast,
-            stats.stl,
-            stats.blk,
-            stats.tov,
-            stats.pf,
-            stats.pts
-        from stage_player_lines
+            count(game_id) over (partition by player_id) as games,
+            avg(ez) over (partition by player_id) as mu,
+            stddev(ez) over (partition by player_id) as sigma,
+            max(ez) over (partition by player_id) as inf,
+            median(ez) over (partition by player_id) as med,
+            rank() over (partition by player_id order by ez desc) as game_rank
+        from stage_top_lines
     )
     select
-        l.player_id,
+        rank() over (order by ez desc)        as class_rank,
+        g.player_id,
+        g.game_id,
+        games,
+        case when home then team_2_logo else team_1_logo end as team_logo,
+        case when home then team_2_location else team_1_location end as team_location,
+        case when home then team_1_logo else team_2_logo end as opp_logo,
+        case when home then team_1_location else team_2_location end as opp_location,
+        case when home then team_2_pts else team_1_pts end as team_pts,
+        case when home then team_1_pts else team_2_pts end as opp_pts,
+        t2.shortConferenceName as opp_conf,
+        headshot_href,
         display_name,
-        name,
-        slug,
-        player_url,
-        img_url,
-        p.jersey,
-        display_weight,
-        display_height,
+        jersey,
         experience_abbreviation,
+        position_abbreviation,
+        display_height, 
+        display_weight,
+        t1.shortConferenceName as team_conf,
+        g.date,
+        home,
         starter,
-        l.game_id,
-        l.date,
-        l.team_id,
-        l.home,
-        opp_id,
-        stl,
-        blk,
-        fgm
-        fga,
-        fg3m,
-        fg3a,
-        tov,
-        ast,
-        fta,
-        ftm,
-        drb,
-        orb,
-        l.minutes,
-        ast_dunk,
-        unast_dunk,
-        miss_dunk,
-        ast_layup,
-        unast_layup,
-        miss_layup,
-        ast_2pt,
-        unast_2pt,
-        ast_3pt,
-        unast_3pt,
-        g.minutes as game_minutes,
-        poss,
-        team_1_location,
-        team_2_location,
-        team_1_logo,
-        team_2_logo,
-        team_1_pts,
-        team_2_pts,
-        team_1_stats.fga as team_1_fga,
-        team_1_stats.fta as team_1_fta,
-        team_1_stats.tov as team_1_tov,
-        team_2_stats.fga as team_2_fga,
-        team_2_stats.fta as team_2_fta,
-        team_2_stats.tov as team_2_tov,
-        round(
-            0.6*orb + 0.3*drb + 1.0*stl + 0.7*blk + 0.3*(ast_dunk+ast_2pt+ast_layup) +
-            1.0*(unast_dunk+unast_layup+unast_2pt) +
-            2.0*unast_3pt + 1.3*ast_3pt + (-0.7)*(fga-fgm) + 0.7*ast + 0.5*ftm - 0.5*(fta-ftm) + 
-            0.1*fta + 0.1*(fga-fg3a) + 0.2*fg3a - 0.8*tov
-        , 3) as ez
-    from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
-    and l.player_id=s.player_id 
-    join stage_game_logs g on l.game_id=g.game_id
-    left join stage_players p on l.player_id=p.id
-    where (g.date between '{start_date}' and '{end_date}')
-    and team_1_logo is not null and team_2_logo is not null
-    order by ez desc
+        concat('<img width=150 src=\"', headshot_href, '\">', '<br>',
+            display_name, ' #', jersey, '<br>',
+            experience_abbreviation, ' ', position_abbreviation, ' ', display_height, ' ', display_weight) as bio,
+        concat('<img width=72 src=\"', case when home then team_2_logo else team_1_logo end, '\">', '<br>',
+            case when home then team_2_location else team_1_location end, '-', 
+            case when home then team_2_pts else team_1_pts end, '<br>',
+            t1.shortConferenceName) as team,
+        concat('<img width=72 src=\"', case when home then team_1_logo else team_2_logo end, '\">', '<br>',
+            case when home then team_1_location else team_2_location end, '-',
+            case when home then team_1_pts else team_2_pts end, '<br>',
+            t2.shortConferenceName) as opp,
+        concat(g.minutes, ' MIN', '<br>', cast(g.minutes*poss/sgl.minutes as INT), ' POSS') as game,
+        concat(
+            stats.ftm + 2*stats.fgm + stats.fg3m, ' PTS', '<br>',
+            cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT), ' TS', '<br>',
+            case when home 
+            then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
+                                (sgl.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+            else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
+                                (sgl.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+            end,
+            ' USG','<br>',
+            round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2), ' PPP'
+
+        ) as usg, 
+        round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2) as ppp,
+        concat(
+            '2PA: ', stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, '<br>',
+            'dnk: ', shots.ast_dunk+shots.unast_dunk, '(', shots.unast_dunk, ')', '<br>',
+            'lay: ', shots.ast_layup+shots.unast_layup, '(', shots.unast_layup, ')', '<br>',
+            'mid: ', shots.ast_mid+shots.unast_mid, '(', shots.unast_mid, ')', '<br>',
+            '3PA: ', stats.fg3m, '-', stats.fg3a, '(', shots.unast_3pt, ')', '<br>',
+            'FTA: ', stats.ftm, '-', stats.fta
+        ) as shots,
+        concat(
+            stats.ast, ' A', '<br>',
+            stats.tov, ' T', '<br>',
+            stats.stl, ' S', '<br>',
+            stats.blk, ' B', '<br>',
+            stats.orb, ' O', '<br>',
+            stats.drb, ' D', '<br>'
+        ) as box,
+        concat(
+            'ez: ', 
+            case
+                   when ez > mu + 2.0 * sigma then round(cast(ez as numeric),1) 
+                   when ez > mu + 1.0 * sigma then round(cast(ez as numeric),1)
+                   when ez < mu - 1.0 * sigma then round(cast(ez as numeric),1)
+                   when ez < mu - 2.0 * sigma then round(cast(ez as numeric),1) 
+                   else round(cast(ez as numeric),1)
+            end, '<br>', 
+            'ez75: ', round(75*ez*sgl.minutes/(g.minutes*poss), 1), '<br>',
+            'μ: ',round(cast(mu as numeric), 1),'<br>',
+            's.d.: ',round(cast(sigma as numeric), 1), '<br>',
+            'max: ', round(cast(inf as numeric), 1), '<br>',
+            'med: ', round(cast(med as numeric), 1)
+        ) as ez,
+        game_rank,
+        case
+            when ez > mu + 2.0 * sigma then '▲▲'
+            when ez > mu + 1.0 * sigma then '▲'
+            when ez < mu - 1.0 * sigma then '▼'
+            when ez < mu - 2.0 * sigma then '▼▼'
+            else ''
+        end as notable
+    from games g join metrics m on g.player_id=m.player_id and g.game_id=m.game_id
+    join stage_game_logs sgl on g.game_id=sgl.game_id
+    left join stage_players p on g.player_id=p.id
+    left join stage_rsci_rankings rsci on p.full_name=rsci.Player
+    join stage_teams t1 on g.team_id=t1.id
+    join stage_teams t2 on g.opp_id=t2.id;
     """

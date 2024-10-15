@@ -1,7 +1,7 @@
 from dagster import Definitions, load_assets_from_modules, with_source_code_references
 
 from .assets import espn
-from .resources import database_resource, download_base_path
+from .resources import database_resource, download_base_path, jinja_templates_path
 from .jobs import daily_update_job, cleanup_job
 from .schedules import daily_update_schedule
 
@@ -14,7 +14,8 @@ defs = Definitions(
     assets=with_source_code_references([*espn_assets]),
     resources={
         "database": database_resource,
-        "storage": download_base_path
+        "storage": download_base_path,
+        "templates": jinja_templates_path
     },
     jobs=all_jobs,
     schedules=all_schedules
