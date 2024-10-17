@@ -1,14 +1,30 @@
 ops:
-  stage_kenpom:
+  top_lines_html_table_for_freshmen:
     config:
-      cols: ["team", "rank", "ortg", "drtg"]
+      top_n: 10
+      start_date: 2024-03-01
+      end_date: 2024-03-04
+  top_lines_html_table_for_sophomores:
+    config:
+      top_n: 10
+      start_date: 2024-03-01
+      end_date: 2024-03-04
+  top_lines_html_table_for_upperclassmen:
+    config:
+      top_n: 10
+      start_date: 2024-03-01
+      end_date: 2024-03-04
 resources:
   database:
     config:
       database:
-        env: 'DUCKDB_DATABASE'
+        env: DUCKDB_DATABASE
   storage:
     config:
       filepath:
-        env: 'LOCAL_STORAGE_PATH'
+        env: LOCAL_STORAGE_PATH
+  templates:
+    config:
+      searchpath:
+        env: JINJA_TEMPLATES_PATH
 

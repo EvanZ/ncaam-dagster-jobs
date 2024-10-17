@@ -13,7 +13,7 @@
         }
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(1, 1fr);
             gap: 20px;
             padding: 20px;
             max-width: 1200px;
@@ -147,8 +147,19 @@
                         <div>
                             <img src={{ player.team_logo}} class="team-logo">
                         </div>
+                        <div class="stats">
+                            <div>{{ player.game }}<br>{{ player.usg }}</div>
+                        </div>
+                        <div class="stats">
+                            <div>{{ player.box }}</div>
+                        </div>
+                        <div class="stats">
+                            <div>{{ player.shots }}</div>
+                        </div>
+                        <div class="stats">
+                            <div>{{ player.ez }}</div>
+                        </div>
                     </div>
-                    <hr>
                     <div class="game-info">
                         {{ player.date.strftime('%-m/%-d') }}
                         {% if player.starter %}Started in {% else %}Came off bench in {% endif %}
@@ -156,13 +167,6 @@
                         {% if player.home %} vs {% else %} at {% endif %}
                         {{ player.opp_location }}
                         {{ player.team_pts }} - {{ player.opp_pts }} 
-                        <br>
-                    </div>
-                    <div class="stats">
-                        <div>{{ player.game }}<br>{{ player.usg }}</div>
-                        <div>{{ player.box }}</div>
-                        <div>{{ player.shots }}</div>
-                        <div>{{ player.ez }}</div>
                     </div>
                 </div>
             </div>

@@ -6,7 +6,8 @@ setup(
     install_requires=[
         "dagster",
         "dagster-cloud",
-        "sklearn"
+        "sklearn",
+        "jinja2"
      ],
     extras_require={"dev": ["dagster-webserver", "pytest"]},
 )

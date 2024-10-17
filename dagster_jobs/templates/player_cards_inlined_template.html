@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; background-color: #f8f8f8; margin: 0; padding: 0;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; max-width: 1200px; margin: auto;">
+        {% for player in players %}
+        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" style="text-decoration: none;">
+            <div style="background-color: white; border-radius: 10px; box-shadow: 0 4px 8px lightgrey; overflow: hidden; transition: 0.3s;">
+                <div style="padding: 15px;">
+                    <div style="display: flex;">
+                        <div style="position: relative; top: -10px; left: -10px; min-width: 40px; color: black; font-size: 32px; font-weight: bold; text-align: center;">
+                            {{ player.class_rank }}
+                        </div>
+                        <div style="display: inline-block; vertical-align: bottom; white-space: nowrap; color: gray; font-size: 16px;">
+                            season rank: #{{ player.game_rank }} of {{ player.games }} {{ player.notable }}
+                        </div>    
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="font-size: 14px; color: gray;">
+                            <img src={{ player.headshot_href }} style="width: 150px; height: auto; filter: drop-shadow(-5px -5px 10px darkgray); display: inline-block;">
+                            <br>
+                            #{{ player.jersey }}
+                            {{ player.display_name }}
+                            ({{ player.experience_abbreviation }})
+                            <br>
+                            {{ player.display_height }}
+                            {{ player.display_weight }}
+                            <br>
+                            {{ player.position_abbreviation }} {{ player.team_location }} ({{ player.team_conf }})
+                        </div>
+                        <div>
+                            <img src={{ player.team_logo }} style="width: 125px; height: auto; display: inline-block;">
+                        </div>
+                    </div>
+                    <hr>
+                    <div style="display: flex; margin-top: 10px; color: #111; font-size: 16px;">
+                        {{ player.date.strftime('%-m/%-d') }}
+                        {% if player.starter %}Started in {% else %}Came off bench in {% endif %}
+                        {% if (player.team_pts-player.opp_pts) > 0 %}win{% else %}loss{% endif %}
+                        {% if player.home %} vs {% else %} at {% endif %}
+                        {{ player.opp_location }}
+                        {{ player.team_pts }} - {{ player.opp_pts }}
+                        <br>
+                    </div>
+                    <div style="font-size: 14px; color: black; margin-top: 5px; padding: 5px; display: flex; justify-content: space-between;">
+                        <div>{{ player.game }}<br>{{ player.usg }}</div>
+                        <div>{{ player.box }}</div>
+                        <div>{{ player.shots }}</div>
+                        <div>{{ player.ez }}</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</body>
+</html>

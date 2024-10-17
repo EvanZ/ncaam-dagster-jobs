@@ -997,36 +997,36 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             case when home then team_1_location else team_2_location end, '-',
             case when home then team_1_pts else team_2_pts end, '<br>',
             t2.shortConferenceName) as opp,
-        concat(g.minutes, ' MIN', '<br>', cast(g.minutes*poss/sgl.minutes as INT), ' POSS') as game,
+        concat(g.minutes, ' min', '<br>', cast(g.minutes*poss/sgl.minutes as INT), ' poss') as game,
         concat(
-            stats.ftm + 2*stats.fgm + stats.fg3m, ' PTS', '<br>',
-            cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT), ' TS', '<br>',
+            stats.ftm + 2*stats.fgm + stats.fg3m, ' pts', '<br>',
+            cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT), ' ts', '<br>',
             case when home 
             then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
                                 (sgl.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
             else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
                                 (sgl.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
             end,
-            ' USG','<br>',
-            round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2), ' PPP'
+            ' usg','<br>',
+            round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2), ' ppp'
 
         ) as usg, 
         round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2) as ppp,
         concat(
-            '2PA: ', stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, '<br>',
-            'dnk: ', shots.ast_dunk+shots.unast_dunk, '(', shots.unast_dunk, ')', '<br>',
-            'lay: ', shots.ast_layup+shots.unast_layup, '(', shots.unast_layup, ')', '<br>',
-            'mid: ', shots.ast_mid+shots.unast_mid, '(', shots.unast_mid, ')', '<br>',
-            '3PA: ', stats.fg3m, '-', stats.fg3a, '(', shots.unast_3pt, ')', '<br>',
-            'FTA: ', stats.ftm, '-', stats.fta
+            '2pt: ', stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, ' (', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')', '<br>',
+            'dnk: ', shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, ' (', shots.unast_dunk, ')', '<br>',
+            'lay: ', shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, ' (', shots.unast_layup, ')', '<br>',
+            'mid: ', shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, ' (', shots.unast_mid, ')', '<br>',
+            '3pt: ', stats.fg3m, '-', stats.fg3a, ' (', shots.unast_3pt, ')', '<br>',
+            'ft: ', stats.ftm, '-', stats.fta
         ) as shots,
         concat(
-            stats.ast, ' A', '<br>',
-            stats.tov, ' T', '<br>',
-            stats.stl, ' S', '<br>',
-            stats.blk, ' B', '<br>',
-            stats.orb, ' O', '<br>',
-            stats.drb, ' D', '<br>'
+            stats.ast, ' ast', '<br>',
+            stats.tov, ' tov', '<br>',
+            stats.stl, ' stl', '<br>',
+            stats.blk, ' blk', '<br>',
+            stats.orb, ' orb', '<br>',
+            stats.drb, ' drb', '<br>'
         ) as box,
         concat(
             'ez: ', 
@@ -1038,8 +1038,8 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
                    else round(cast(ez as numeric),1)
             end, '<br>', 
             'ez75: ', round(75*ez*sgl.minutes/(g.minutes*poss), 1), '<br>',
-            'μ: ',round(cast(mu as numeric), 1),'<br>',
-            's.d.: ',round(cast(sigma as numeric), 1), '<br>',
+            'avg: ',round(cast(mu as numeric), 1),'<br>',
+            'std: ',round(cast(sigma as numeric), 1), '<br>',
             'max: ', round(cast(inf as numeric), 1), '<br>',
             'med: ', round(cast(med as numeric), 1)
         ) as ez,

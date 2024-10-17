@@ -10,3 +10,10 @@ DATE_FORMAT = "%Y%m%d"
 PYTHON = "python"
 DUCKDB = "duckdb"
 SKLEARN = "scikitlearn"
+
+# group names
+DAILY = "update_daily"
+MANUAL = "update_manual"
+MODELS = "update_model"
+SEASONAL = "update_seasonal"
+REPORT = "create_report"
