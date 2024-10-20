@@ -515,15 +515,14 @@ def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckD
     context.log.info(sql_query)
 
     with database.get_connection() as conn:
-        conn.execute(sql_query)
-        count_players = conn.execute("select count(distinct player_id) as players from stage_player_assists_by_game;").fetchone()[0]
-        df = conn.execute("from stage_player_assists_by_game limit 10;").df()
-        context.log.info(count_players)
+        context.log.info(queries.create_table_stage_player_assists_by_game())
+        conn.execute(queries.create_table_stage_player_assists_by_game())
+        df = conn.execute(sql_query).df()
 
     return MaterializeResult(
         metadata={
-            "players": MetadataValue.int(count_players),
-            "sample": MetadataValue.md(df.to_markdown())
+            "num_players": MetadataValue.int(len(df['player_id'])),
+            "sample": MetadataValue.md(df.head(10).to_markdown())
         }
     )
 
@@ -531,7 +530,8 @@ def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckD
     deps=[
         "stage_player_lines", 
         "stage_player_shots_by_game", 
-        "stage_players"
+        "stage_players",
+        "stage_player_assists_by_game"
     ],
     partitions_def=daily_partition,
     group_name=DAILY,
@@ -545,11 +545,11 @@ def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) ->
     context.log.info(f'partition_date: {partition_date}')
 
     sql_query = queries.insert_table_stage_top_lines(date=partition_date)
-    context.log.info(sql_query)
 
     with database.get_connection() as conn:
         context.log.info(queries.create_table_stage_top_lines())
         conn.execute(queries.create_table_stage_top_lines())
+        context.log.info(sql_query)
         df = conn.execute(sql_query).df()
 
     return MaterializeResult(

@@ -712,7 +712,7 @@ def stage_player_assists_by_game(date: str) -> str:
     count different types of assists
     """
     return f"""
-    create or replace table stage_player_assists_by_game as
+    insert or ignore into stage_player_assists_by_game
     select 
         game_id,
         team_id,
@@ -727,7 +727,8 @@ def stage_player_assists_by_game(date: str) -> str:
     where type_id in (558, 572, 574) and
     date='{date}'
     and player_2_id is not null
-    group by ALL;
+    group by ALL
+    returning game_id, team_id, player_id, ast_to_dunk, ast_to_layup, ast_to_mid, ast_to_3pt;
     """
 
 def create_table_stage_top_lines() -> str:
@@ -779,7 +780,19 @@ def create_table_stage_top_lines() -> str:
                 unast_3pt INT,
                 miss_3pt INT
             ),
+            assists STRUCT(
+                dunks INT,
+                layups INT,
+                midrange INT,
+                threes INT
+            ),
             ez DOUBLE,
+            ez_components STRUCT(
+                rebounding DOUBLE,
+                scoring DOUBLE,
+                passing DOUBLE,
+                stocks DOUBLE
+            ),
             PRIMARY KEY (game_id, player_id)            
         );
     """
@@ -901,6 +914,12 @@ def insert_table_stage_top_lines(date: str) -> str:
                 unast_3pt,
                 miss_3pt
             ) as shots,
+            struct_pack(
+                dunks:=ast_to_dunk,
+                layups:=ast_to_layup,
+                midrange:=ast_to_mid,
+                threes:=ast_to_3pt
+            ) as assists,
             round(
                 0.6*(orb/(ta.orb_ortg*oa.orb_drtg)) 
                 + 0.3*(drb/(ta.drb_drtg*oa.drb_ortg)) 
@@ -920,17 +939,47 @@ def insert_table_stage_top_lines(date: str) -> str:
                     + miss_layup/(ta.miss_layup_ortg*oa.miss_layup_drtg)
                     + miss_dunk/(ta.miss_mid_ortg*oa.miss_mid_drtg)
                     + miss_3pt/(ta.miss_3pt_ortg*oa.miss_3pt_drtg)) 
-                + 0.7*ast / (ta.ast_ortg*oa.ast_drtg)
                 + 0.5*ftm
                 - 0.5*(fta-ftm) 
                 + 0.1*fta / (ta.fta_ortg*oa.fta_drtg)
                 + 0.1*(fga/(ta.fga_ortg*oa.fga_drtg) 
                     - fg3a/(ta.fg3a_ortg*oa.fg3a_drtg)) 
                 + 0.2*fg3a / (ta.fg3a_ortg*oa.fg3a_drtg)
+                + 0.7*ast / (ta.ast_ortg*oa.ast_drtg)
                 - 0.8*(tov/(ta.tov_ortg*oa.tov_drtg))
-            , 3) as ez
+            , 3) as ez,
+            struct_pack(
+                rebounding:=0.6*(orb/(ta.orb_ortg*oa.orb_drtg)) 
+                + 0.3*(drb/(ta.drb_drtg*oa.drb_ortg)),
+                scoring:=0.3*(ast_dunk/(ta.ast_dunk_ortg*oa.ast_dunk_drtg) 
+                    + ast_mid/(ta.ast_mid_ortg*oa.ast_mid_drtg) 
+                    + ast_layup/(ta.ast_layup_ortg*oa.ast_layup_drtg)) 
+                + 1.0*(unast_dunk/(ta.unast_dunk_ortg*oa.unast_dunk_drtg) 
+                    + unast_layup/(ta.unast_layup_ortg*oa.unast_layup_drtg) 
+                    + unast_mid/(ta.unast_mid_ortg*oa.unast_mid_drtg)
+                    + unast_tip) 
+                + 2.0*unast_3pt/(ta.unast_3pt_ortg*oa.unast_3pt_drtg) 
+                + 1.3*ast_3pt /(ta.ast_3pt_ortg*oa.ast_3pt_drtg)
+                + (-0.7)*(miss_tip  
+                    + miss_dunk/(ta.miss_dunk_ortg*oa.miss_dunk_drtg)
+                    + miss_layup/(ta.miss_layup_ortg*oa.miss_layup_drtg)
+                    + miss_dunk/(ta.miss_mid_ortg*oa.miss_mid_drtg)
+                    + miss_3pt/(ta.miss_3pt_ortg*oa.miss_3pt_drtg)) 
+                + 0.5*ftm
+                - 0.5*(fta-ftm) 
+                + 0.1*fta / (ta.fta_ortg*oa.fta_drtg)
+                + 0.1*(fga/(ta.fga_ortg*oa.fga_drtg) 
+                    - fg3a/(ta.fg3a_ortg*oa.fg3a_drtg)) 
+                + 0.2*fg3a / (ta.fg3a_ortg*oa.fg3a_drtg),
+                passing:=0.7*ast / (ta.ast_ortg*oa.ast_drtg)
+                - 0.8*(tov/(ta.tov_ortg*oa.tov_drtg)),
+                stocks:=1.0*(stl/(ta.stl_drtg*oa.stl_ortg))
+                + 0.7*(blk/(ta.blk_drtg*oa.blk_ortg))
+            ) as ez_components
         from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
         and l.player_id=s.player_id 
+        join stage_player_assists_by_game a on l.game_id=a.game_id
+        and l.player_id=a.player_id
         join team_adj ta on l.team_id=ta.team_id
         join opp_adj oa on l.opp_id=oa.team_id
         join players p on p.id=l.player_id        
@@ -998,6 +1047,19 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             case when home then team_1_pts else team_2_pts end, '<br>',
             t2.shortConferenceName) as opp,
         concat(g.minutes, ' min', '<br>', cast(g.minutes*poss/sgl.minutes as INT), ' poss') as game,
+        g.minutes,
+        cast(g.minutes*poss/sgl.minutes as INT) as poss,
+        struct_pack(
+            pts:=stats.ftm + 2*stats.fgm + stats.fg3m,
+            ts:=cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT),
+            usg:=case when home 
+                then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
+                                    (sgl.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+                else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
+                                    (sgl.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+                end,
+            ppp:=round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2)
+        ) as usg_struct,
         concat(
             stats.ftm + 2*stats.fgm + stats.fg3m, ' pts', '<br>',
             cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT), ' ts', '<br>',
@@ -1012,14 +1074,14 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
 
         ) as usg, 
         round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2) as ppp,
-        concat(
-            '2pt: ', stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, ' (', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')', '<br>',
-            'dnk: ', shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, ' (', shots.unast_dunk, ')', '<br>',
-            'lay: ', shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, ' (', shots.unast_layup, ')', '<br>',
-            'mid: ', shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, ' (', shots.unast_mid, ')', '<br>',
-            '3pt: ', stats.fg3m, '-', stats.fg3a, ' (', shots.unast_3pt, ')', '<br>',
-            'ft: ', stats.ftm, '-', stats.fta
-        ) as shots,
+        struct_pack(
+            twos:= concat(stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, ' (', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')'), 
+            dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, ' (', shots.unast_dunk, ')'), 
+            layups:= concat(shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, ' (', shots.unast_layup, ')'),
+            midrange:= concat(shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, ' (', shots.unast_mid, ')'), 
+            threes:= concat(stats.fg3m, '-', stats.fg3a, ' (', shots.unast_3pt, ')'),
+            fts:= concat(stats.ftm, '-', stats.fta)
+        ) as shots_struct,
         concat(
             stats.ast, ' ast', '<br>',
             stats.tov, ' tov', '<br>',
@@ -1028,6 +1090,7 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             stats.orb, ' orb', '<br>',
             stats.drb, ' drb', '<br>'
         ) as box,
+        stats,
         concat(
             'ez: ', 
             case
@@ -1043,6 +1106,22 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             'max: ', round(cast(inf as numeric), 1), '<br>',
             'med: ', round(cast(med as numeric), 1)
         ) as ez,
+        struct_pack(
+            ez:=case
+                   when ez > mu + 2.0 * sigma then round(cast(ez as double),1) 
+                   when ez > mu + 1.0 * sigma then round(cast(ez as double),1)
+                   when ez < mu - 1.0 * sigma then round(cast(ez as double),1)
+                   when ez < mu - 2.0 * sigma then round(cast(ez as double),1) 
+                   else round(cast(ez as double),1)
+                end,
+            ez75:=round(75*ez*sgl.minutes/(g.minutes*poss), 1),
+            avg:=round(cast(mu as double), 1),
+            std:=round(cast(sigma as double), 1),
+            max:=round(cast(inf as double), 1),
+            med:=round(cast(med as double), 1)
+        ) as ez_struct,
+        ez_components,
+        assists,
         game_rank,
         case
             when ez > mu + 2.0 * sigma then '▲▲'
