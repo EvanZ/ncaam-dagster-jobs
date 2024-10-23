@@ -535,9 +535,10 @@ def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckD
     ],
     partitions_def=daily_partition,
     group_name=DAILY,
-    compute_kind=DUCKDB
+    compute_kind=DUCKDB,
+    check_specs=[AssetCheckSpec(name="has_at_least_one_player", asset="stage_top_lines")],
 )
-def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> Generator:
     """
     stage table that will be turned into html report
     """
@@ -552,7 +553,18 @@ def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) ->
         context.log.info(sql_query)
         df = conn.execute(sql_query).df()
 
-    return MaterializeResult(
+    has_at_least_one_player = bool(len(df['player_id']) > 0)
+
+    yield AssetCheckResult(
+                passed=has_at_least_one_player,
+                check_name="has_at_least_one_player"
+    )
+
+    # if not has_at_least_one_player:
+    #     raise Exception("No players inserted into staging table. Check for empty schedule? Aborting further materialization.")
+        
+    yield Output(
+        value=df,
         metadata={
             "query": MetadataValue.md(sql_query),
             "num_players": MetadataValue.int(len(df['player_id'])),

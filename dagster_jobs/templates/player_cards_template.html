@@ -6,65 +6,61 @@
     <title>Player Cards</title>
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: Georgia, 'Times New Roman', Times, serif;
             background-color: #f8f8f8;
+            color: gray;
             margin: 0;
             padding: 0;
         }
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            padding: 20px;
-            max-width: 1200px;
-            margin: auto;
+            gap: 1em;
+            margin: 2em;
         }
         .card {
             background-color: snow;
-            border-radius: 10px;
+            border-radius: 1em;
             box-shadow: 0 4px 8px lightgrey;
             overflow: hidden;
             transition: 0.3s;
+            max-width: 430px;
         }
         .card:hover {
-            box-shadow: 0 8px 16px darkgray;
+            box-shadow: 0em 0em 1em gray;
+            transition: 0.5s;
         }
         .card-content {
-            padding: 15px;
+            padding: 1em;
         }
         .card-header {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 1em;
         }
         .class-rank {
             position: relative;
-            top: -10px;
-            left: -10px;
-            min-width: 40px;
+            gap: 1em;
             color: black;
-            font-size: 32px;
+            font-size: 20pt;
             font-weight: bold;
-            text-align: center;
         }
         .player-name {
             margin: 0;
         }
         .player-bio {
-            font-size: 14px;
+            font-size: 1em;
             color: gray;
+            text-align: center;
         }
         .game-info {
             display: flex;
             margin-top: 10px;
-            color: #111;
-            font-size: 16px;
+            color: gray;
         }
         .stats {
-            font-size: 14px;
-            color: darkgray;
-            margin-top: 5px;
-            padding: 5px;
+            color: gray;
+            margin-top: 0.5em;
         }
         .btn-link {
             text-decoration: none;
@@ -74,18 +70,16 @@
         }
         .player-rank {
             display: inline-block;
-            vertical-align: bottom;
-            white-space: nowrap;
             color: gray;
-            font-size: 16px;
         }    
         .player-row {
             display: flex;
+            gap: 1em;
         }
         .shadow-headshot {
             width: 200px;
             height: auto;
-            filter: drop-shadow(-5px -5px 10px darkgray);
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
             /* Optional: Prevent surrounding div issues */
             display: inline-block;
         }
@@ -95,10 +89,9 @@
             display: inline-block;
         }
         .value {
-            color: blue;
-            font-weight: bold;
+            color: cornflowerblue;
             font-family: 'Courier New', Courier, monospace;
-            /* font-weight: bold; */
+            font-weight: bold;
         }
         @media (max-width: 768px) {
             .grid-container {
@@ -133,8 +126,16 @@
                             {{ player.class_rank }}
                         </div>
                         <div class="player-rank">
-                            season rank: #{{ player.game_rank }} of {{ player.games }}
+                            own: #{{ player.game_rank }} ({{ player.games }})
                         </div>    
+                        <div class="player-rank">
+                            <span class="value">{{ player.usg_struct.pts }}</span> pts
+                            <span class="value">{{ player.stats.ast }}</span> ast
+                            <span class="value">{{ player.stats.orb+player.stats.drb }}</span> reb
+                            <span class="value">{{ player.stats.stl }}</span> stl
+                            <span class="value">{{ player.stats.blk }}</span> blk
+                            <span class="value">{{ player.stats.tov }}</span> tov
+                        </div>
                     </div>
                     <div class="card-header">
                         <div class="player-bio">
@@ -142,14 +143,15 @@
                             <br>
                             #{{ player.jersey }}
                             {{ player.display_name }}
-                            ({{ player.experience_abbreviation }})
                             <br>
                             {{ player.display_height }}
-                            {{ player.display_weight }}
-                            <br>
-                            {{ player.position_abbreviation }} {{ player.team_location}} ({{ player.team_conf }})
+                            {{ player.display_weight }} - {{ player.experience_abbreviation }} - {{ player.position_abbreviation }}
                         </div>
-                        <div>
+                        <div class="player-bio">
+                            {{ player.team_location}} 
+                            <br>
+                            {{ player.team_conf }}
+                            <br>
                             <img src={{ player.team_logo}} class="team-logo">
                         </div>
                     </div>
@@ -166,40 +168,37 @@
                          <div>
                             <span class="value">{{ player.minutes }}</span> min
                             <span class="value">{{ player.poss }}</span> poss
-                            <span class="value">{{ player.usg_struct.pts }}</span> pts
                             <span class="value">{{ player.usg_struct.usg }}</span> usg
                             <span class="value">{{ player.usg_struct.ts }}</span> ts
                             <span class="value">{{ player.usg_struct.ppp }}</span> ppp
                             <br>
-                            <span class="value">{{ player.stats.ast }}</span> ast
-                            <span class="value">{{ player.stats.tov }}</span> tov
-                            <span class="value">{{ player.stats.stl }}</span> stl
-                            <span class="value">{{ player.stats.blk }}</span> blk
-                            <span class="value">{{ player.stats.orb }}</span> orb
-                            <span class="value">{{ player.stats.drb }}</span> drb
+                            assists: 
+                            <span class="value">{{ player.assists.layups }}</span> layup
+                            <span class="value">{{ player.assists.dunks }}</span> dunk
+                            <span class="value">{{ player.assists.midrange }}</span> midrange
+                            <span class="value">{{ player.assists.threes }}</span> 3pt
                             <br>
-                            2s: <span class="value">{{ player.shots_struct.twos }}</span>
-                            3s: <span class="value">{{ player.shots_struct.threes }}</span>
+                            rebounds: 
+                            <span class="value">{{ player.stats.orb }}</span> offense
+                            <span class="value">{{ player.stats.drb }}</span> defense
+                            <br>
+                            2pt: <span class="value">{{ player.shots_struct.twos }}</span>
+                            3pt: <span class="value">{{ player.shots_struct.threes }}</span>
                             ft: <span class="value">{{ player.shots_struct.fts }}</span>
                             <br>
                             dnk: <span class="value">{{ player.shots_struct.dunks }}</span>
                             lay: <span class="value">{{ player.shots_struct.layups }}</span>
                             mid: <span class="value">{{ player.shots_struct.midrange }}</span>
-                            <br>
-                            lay<sub>ast</sub>: <span class="value">{{ player.assists.layups }}</span>
-                            dnk<sub>ast</sub>: <span class="value">{{ player.assists.dunks }}</span> 
-                            mid<sub>ast</sub>: <span class="value">{{ player.assists.midrange }}</span>
-                            3pt<sub>ast</sub>: <span class="value">{{ player.assists.threes }}</span>
                             <div style="display: flex; height: 16px; width: 100%; background-color: #f0f0f0; border-radius: 5px; overflow: hidden; border: solid black 2px;">
                                 <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
                                 <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
                                 <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
                                 <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
                             </div>                            
-                            scoring: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
-                            ast/tov: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>
-                            stocks: <span class="value" style="color: darkorange;">{{ player.ez_components.stocks | round(1) }}</span>
-                            rebound: <span class="value" style="color: palevioletred;">{{ player.ez_components.rebounding | round(1) }}</span>
+                            score: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
+                            pass: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>
+                            def: <span class="value" style="color: darkorange;">{{ player.ez_components.stocks | round(1) }}</span>
+                            reb: <span class="value" style="color: palevioletred;">{{ player.ez_components.rebounding | round(1) }}</span>
                             <br>
                             ez: <span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span> 
                             ez75: <span class="value">{{ player.ez_struct.ez75 }}</span>

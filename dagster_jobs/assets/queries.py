@@ -1029,6 +1029,7 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         jersey,
         experience_abbreviation,
         position_abbreviation,
+        position_display_name,
         display_height, 
         display_weight,
         t1.shortConferenceName as team_conf,
@@ -1075,11 +1076,11 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         ) as usg, 
         round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2) as ppp,
         struct_pack(
-            twos:= concat(stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, ' (', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')'), 
-            dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, ' (', shots.unast_dunk, ')'), 
-            layups:= concat(shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, ' (', shots.unast_layup, ')'),
-            midrange:= concat(shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, ' (', shots.unast_mid, ')'), 
-            threes:= concat(stats.fg3m, '-', stats.fg3a, ' (', shots.unast_3pt, ')'),
+            twos:= concat(stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, '(', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')'), 
+            dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, '(', shots.unast_dunk, ')'), 
+            layups:= concat(shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, '(', shots.unast_layup, ')'),
+            midrange:= concat(shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, '(', shots.unast_mid, ')'), 
+            threes:= concat(stats.fg3m, '-', stats.fg3a, '(', shots.unast_3pt, ')'),
             fts:= concat(stats.ftm, '-', stats.fta)
         ) as shots_struct,
         concat(
