@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            background-color: #f8f8f8;
+            color: gray;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1em;
+            min-width: 430px;
+        }
+        .card {
+            background-color: snow;
+            border-radius: 2em;
+            box-shadow: 0 2px 4px lightgrey;
+            overflow: hidden;
+            transition: 0.3s;
+            padding: 1em;
+        }
+        .card:hover {
+            box-shadow: 0em 0em 0.5em goldenrod;
+            transition: 0.5s;
+        }
+        .card-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: left;
+            }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        .class-rank {
+            position: relative;
+            gap: 1em;
+            color: black;
+            font-size: 20pt;
+            font-weight: bold;
+        }
+        .player-name {
+            margin: 0;
+        }
+        .player-bio {
+            font-size: 1em;
+            color: gray;
+            text-align: center;
+        }
+        .game-info {
+            display: block;
+            margin-top: 10px;
+            color: black;
+        }
+        .stats {
+            color: gray;
+            margin-top: 0.5em;
+        }
+        .btn-link {
+            text-decoration: none;
+        }
+        .player-link {
+            text-decoration:none;
+        }
+        .player-rank {
+            display: inline-block;
+            color: gray;
+        }    
+        .player-row {
+            display: flex;
+            gap: 1em;
+        }
+        .shadow-headshot {
+            width: 200px;
+            height: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        .team-logo {
+            width: 150px;
+            height: auto;
+            display: inline-block;
+        }
+        .value {
+            color: cornflowerblue;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        @media (max-width: 1360px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 850px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+            .team-logo {
+                width: 150px;
+            }
+            .shadow-headshot {
+                width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        1
+                    </div>
+                    <div class="player-rank">
+                        own: #1 (27)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">31</span> pts
+                        <span class="value">10</span> ast
+                        <span class="value">4</span> reb
+                        <span class="value">5</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">6</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5176275" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5176275.png class="shadow-headshot">
+                            <br>
+                            #5
+                            Deywilk Tavarez
+                            <br>
+                            6' 2"
+                            185 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Delaware State 
+                        <br>
+                        MEAC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/2169.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    win
+                     vs 
+                    Norfolk State
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401594415">
+                        85 - 71
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">27.8▲▲</span> 
+                        ez75: <span class="value">26.2</span>
+                        avg: <span class="value">9.2</span>
+                        std: <span class="value">5.8</span>
+                        max: <span class="value">27.8</span>
+                        <br>
+                        <span class="value">37</span> min
+                        <span class="value">80</span> poss
+                        <span class="value">27</span> usg
+                        <span class="value">112</span> ts
+                        <span class="value">1.36</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">3</span> layup
+                        <span class="value">2</span> dunk
+                        <span class="value">4</span> midrange
+                        <span class="value">1</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">0</span> offense
+                        <span class="value">4</span> defense
+                        <br>
+                        2pt: <span class="value">3-5(2)</span>
+                        3pt: <span class="value">5-6(0)</span>
+                        ft: <span class="value">10-13</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">2-3(2)</span>
+                        mid: <span class="value">1-2(0)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 63.3182332304707%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 17.6"></div>
+                            <div style="background-color: dodgerblue; width: 13.498654348075501%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 3.8"></div>
+                            <div style="background-color: darkorange; width: 17.962750327077597%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 5.0"></div>
+                            <div style="background-color: palevioletred; width: 5.180794508381916%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.4"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">17.6</span>
+                        pass: <span class="value" style="color: dodgerblue;">3.8</span>
+                        def: <span class="value" style="color: darkorange;">5.0</span>
+                        reb: <span class="value" style="color: palevioletred;">1.4</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        2
+                    </div>
+                    <div class="player-rank">
+                        own: #2 (21)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">25</span> pts
+                        <span class="value">5</span> ast
+                        <span class="value">2</span> reb
+                        <span class="value">0</span> stl
+                        <span class="value">2</span> blk
+                        <span class="value">3</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5177122" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5177122.png class="shadow-headshot">
+                            <br>
+                            #2
+                            De'Shayne Montgomery
+                            <br>
+                            6' 5"
+                            190 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Mount St. Mary's 
+                        <br>
+                        MAAC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/116.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/3
+                    Started in 
+                    win
+                     at 
+                    Niagara
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401594360">
+                        91 - 72
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">16.0▲</span> 
+                        ez75: <span class="value">15.7</span>
+                        avg: <span class="value">9.0</span>
+                        std: <span class="value">5.8</span>
+                        max: <span class="value">16.8</span>
+                        <br>
+                        <span class="value">34</span> min
+                        <span class="value">76</span> poss
+                        <span class="value">19</span> usg
+                        <span class="value">98</span> ts
+                        <span class="value">1.43</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">1</span> layup
+                        <span class="value">2</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">2</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">0</span> offense
+                        <span class="value">2</span> defense
+                        <br>
+                        2pt: <span class="value">7-9(7)</span>
+                        3pt: <span class="value">1-2(0)</span>
+                        ft: <span class="value">8-8</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">7-9(7)</span>
+                        mid: <span class="value">0-0(0)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 43.521665093383696%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 12.1"></div>
+                            <div style="background-color: dodgerblue; width: 6.6587131539505%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 1.9"></div>
+                            <div style="background-color: darkorange; width: 5.103261418598715%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 1.4"></div>
+                            <div style="background-color: palevioletred; width: 2.3368154183649508%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 0.6"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">12.1</span>
+                        pass: <span class="value" style="color: dodgerblue;">1.9</span>
+                        def: <span class="value" style="color: darkorange;">1.4</span>
+                        reb: <span class="value" style="color: palevioletred;">0.6</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        3
+                    </div>
+                    <div class="player-rank">
+                        own: #3 (22)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">20</span> pts
+                        <span class="value">5</span> ast
+                        <span class="value">4</span> reb
+                        <span class="value">4</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">4</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5175952" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5175952.png class="shadow-headshot">
+                            <br>
+                            #2
+                            Malik Mack
+                            <br>
+                            6' 2"
+                            175 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Harvard 
+                        <br>
+                        Ivy
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/108.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/1
+                    Started in 
+                    loss
+                     at 
+                    Brown
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401577678">
+                        68 - 71
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">15.9</span> 
+                        ez75: <span class="value">16.8</span>
+                        avg: <span class="value">11.9</span>
+                        std: <span class="value">4.2</span>
+                        max: <span class="value">18.4</span>
+                        <br>
+                        <span class="value">41</span> min
+                        <span class="value">71</span> poss
+                        <span class="value">26</span> usg
+                        <span class="value">51</span> ts
+                        <span class="value">0.84</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">1</span> layup
+                        <span class="value">1</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">3</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">2</span> offense
+                        <span class="value">2</span> defense
+                        <br>
+                        2pt: <span class="value">6-11(5)</span>
+                        3pt: <span class="value">2-8(1)</span>
+                        ft: <span class="value">2-2</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">3-3(2)</span>
+                        mid: <span class="value">3-8(3)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 32.86207695367933%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 9.1"></div>
+                            <div style="background-color: dodgerblue; width: 3.084101053075783%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 0.9"></div>
+                            <div style="background-color: darkorange; width: 14.46285602094443%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 4.0"></div>
+                            <div style="background-color: palevioletred; width: 6.698729883623866%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.9"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">9.1</span>
+                        pass: <span class="value" style="color: dodgerblue;">0.9</span>
+                        def: <span class="value" style="color: darkorange;">4.0</span>
+                        reb: <span class="value" style="color: palevioletred;">1.9</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        4
+                    </div>
+                    <div class="player-rank">
+                        own: #3 (25)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">23</span> pts
+                        <span class="value">3</span> ast
+                        <span class="value">3</span> reb
+                        <span class="value">0</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">2</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/4895740" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/4895740.png class="shadow-headshot">
+                            <br>
+                            #12
+                            Josh Hubbard
+                            <br>
+                            5' 11"
+                            190 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Mississippi State 
+                        <br>
+                        SEC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/344.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    loss
+                     at 
+                    Auburn
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401597216">
+                        63 - 78
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">15.2▲</span> 
+                        ez75: <span class="value">17.3</span>
+                        avg: <span class="value">8.4</span>
+                        std: <span class="value">5.0</span>
+                        max: <span class="value">17.3</span>
+                        <br>
+                        <span class="value">36</span> min
+                        <span class="value">66</span> poss
+                        <span class="value">23</span> usg
+                        <span class="value">70</span> ts
+                        <span class="value">1.17</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">2</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">1</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">1</span> offense
+                        <span class="value">2</span> defense
+                        <br>
+                        2pt: <span class="value">0-4(0)</span>
+                        3pt: <span class="value">6-11(3)</span>
+                        ft: <span class="value">5-6</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">0-3(0)</span>
+                        mid: <span class="value">0-1(0)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 43.149289406838925%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 12.0"></div>
+                            <div style="background-color: dodgerblue; width: 7.303071565737378%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 2.0"></div>
+                            <div style="background-color: darkorange; width: 0.0%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 0.0"></div>
+                            <div style="background-color: palevioletred; width: 4.166109892188863%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.2"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">12.0</span>
+                        pass: <span class="value" style="color: dodgerblue;">2.0</span>
+                        def: <span class="value" style="color: darkorange;">0.0</span>
+                        reb: <span class="value" style="color: palevioletred;">1.2</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        5
+                    </div>
+                    <div class="player-rank">
+                        own: #1 (29)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">20</span> pts
+                        <span class="value">1</span> ast
+                        <span class="value">9</span> reb
+                        <span class="value">2</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">0</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/4845365" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/4845365.png class="shadow-headshot">
+                            <br>
+                            #3
+                            Sonny Wilson
+                            <br>
+                            6' 1"
+                            175 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Toledo 
+                        <br>
+                        Mid-American
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/2649.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    win
+                     at 
+                    Buffalo
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401588706">
+                        85 - 79
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">15.0▲▲</span> 
+                        ez75: <span class="value">16.0</span>
+                        avg: <span class="value">5.2</span>
+                        std: <span class="value">4.2</span>
+                        max: <span class="value">15.0</span>
+                        <br>
+                        <span class="value">34</span> min
+                        <span class="value">71</span> poss
+                        <span class="value">12</span> usg
+                        <span class="value">100</span> ts
+                        <span class="value">1.67</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">1</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">0</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">3</span> offense
+                        <span class="value">6</span> defense
+                        <br>
+                        2pt: <span class="value">4-6(2)</span>
+                        3pt: <span class="value">1-2(0)</span>
+                        ft: <span class="value">9-9</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">2-2(0)</span>
+                        mid: <span class="value">2-4(2)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 33.38453129672153%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 9.3"></div>
+                            <div style="background-color: dodgerblue; width: 1.9673714904227853%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 0.5"></div>
+                            <div style="background-color: darkorange; width: 5.9553767789172385%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 1.7"></div>
+                            <div style="background-color: palevioletred; width: 12.77039962198421%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 3.6"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">9.3</span>
+                        pass: <span class="value" style="color: dodgerblue;">0.5</span>
+                        def: <span class="value" style="color: darkorange;">1.7</span>
+                        reb: <span class="value" style="color: palevioletred;">3.6</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        6
+                    </div>
+                    <div class="player-rank">
+                        own: #9 (33)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">21</span> pts
+                        <span class="value">4</span> ast
+                        <span class="value">6</span> reb
+                        <span class="value">1</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">2</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5101623" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5101623.png class="shadow-headshot">
+                            <br>
+                            #3
+                            Markus Burton
+                            <br>
+                            5' 11"
+                            166 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Notre Dame 
+                        <br>
+                        ACC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/87.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    win
+                     vs 
+                    Clemson
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401604223">
+                        69 - 62
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">14.4</span> 
+                        ez75: <span class="value">17.2</span>
+                        avg: <span class="value">10.9</span>
+                        std: <span class="value">4.5</span>
+                        max: <span class="value">24.0</span>
+                        <br>
+                        <span class="value">35</span> min
+                        <span class="value">63</span> poss
+                        <span class="value">26</span> usg
+                        <span class="value">61</span> ts
+                        <span class="value">1.02</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">1</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">3</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">0</span> offense
+                        <span class="value">6</span> defense
+                        <br>
+                        2pt: <span class="value">6-10(6)</span>
+                        3pt: <span class="value">2-6(1)</span>
+                        ft: <span class="value">3-6</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">2-2(2)</span>
+                        mid: <span class="value">4-8(4)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 32.687273439628854%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 9.1"></div>
+                            <div style="background-color: dodgerblue; width: 9.11302821599892%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 2.5"></div>
+                            <div style="background-color: darkorange; width: 3.8779862023391125%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 1.1"></div>
+                            <div style="background-color: palevioletred; width: 6.1700926621121175%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.7"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">9.1</span>
+                        pass: <span class="value" style="color: dodgerblue;">2.5</span>
+                        def: <span class="value" style="color: darkorange;">1.1</span>
+                        reb: <span class="value" style="color: palevioletred;">1.7</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        7
+                    </div>
+                    <div class="player-rank">
+                        own: #1 (10)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">20</span> pts
+                        <span class="value">3</span> ast
+                        <span class="value">4</span> reb
+                        <span class="value">0</span> stl
+                        <span class="value">1</span> blk
+                        <span class="value">5</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5177166" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5177166.png class="shadow-headshot">
+                            <br>
+                            #20
+                            Kyle Winters
+                            <br>
+                            6' 3"
+                            200 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Siena 
+                        <br>
+                        MAAC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/2561.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/3
+                    Started in 
+                    loss
+                     at 
+                    Quinnipiac
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401594378">
+                        57 - 71
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">13.3▲▲</span> 
+                        ez75: <span class="value">13.6</span>
+                        avg: <span class="value">3.7</span>
+                        std: <span class="value">4.2</span>
+                        max: <span class="value">13.3</span>
+                        <br>
+                        <span class="value">38</span> min
+                        <span class="value">73</span> poss
+                        <span class="value">20</span> usg
+                        <span class="value">91</span> ts
+                        <span class="value">1.25</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">1</span> layup
+                        <span class="value">1</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">1</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">1</span> offense
+                        <span class="value">3</span> defense
+                        <br>
+                        2pt: <span class="value">4-5(4)</span>
+                        3pt: <span class="value">4-6(2)</span>
+                        ft: <span class="value">0-0</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">1-1(1)</span>
+                        mid: <span class="value">3-4(3)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 42.429671349323904%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 11.8"></div>
+                            <div style="background-color: dodgerblue; width: -1.8472088607175177%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: -0.5"></div>
+                            <div style="background-color: darkorange; width: 1.8320212605795532%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 0.5"></div>
+                            <div style="background-color: palevioletred; width: 5.460377106656154%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.5"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">11.8</span>
+                        pass: <span class="value" style="color: dodgerblue;">-0.5</span>
+                        def: <span class="value" style="color: darkorange;">0.5</span>
+                        reb: <span class="value" style="color: palevioletred;">1.5</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        8
+                    </div>
+                    <div class="player-rank">
+                        own: #2 (31)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">18</span> pts
+                        <span class="value">6</span> ast
+                        <span class="value">6</span> reb
+                        <span class="value">1</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">1</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5177097" class="btn-link">
+                        <div class="player-bio">
+                            <img src=None class="shadow-headshot">
+                            <br>
+                            #3
+                            Jeremiah Quigley
+                            <br>
+                            5' 11"
+                            160 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Iona 
+                        <br>
+                        MAAC
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/314.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/3
+                    Started in 
+                    win
+                     at 
+                    Marist
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401594322">
+                        71 - 64
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">13.3▲</span> 
+                        ez75: <span class="value">14.2</span>
+                        avg: <span class="value">6.9</span>
+                        std: <span class="value">3.5</span>
+                        max: <span class="value">13.7</span>
+                        <br>
+                        <span class="value">38</span> min
+                        <span class="value">70</span> poss
+                        <span class="value">25</span> usg
+                        <span class="value">57</span> ts
+                        <span class="value">1.01</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">0</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">6</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">0</span> offense
+                        <span class="value">6</span> defense
+                        <br>
+                        2pt: <span class="value">6-11(4)</span>
+                        3pt: <span class="value">1-4(0)</span>
+                        ft: <span class="value">3-4</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">4-6(3)</span>
+                        mid: <span class="value">2-5(1)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 22.416217752266604%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 6.2"></div>
+                            <div style="background-color: dodgerblue; width: 15.333020976627436%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 4.3"></div>
+                            <div style="background-color: darkorange; width: 2.6970751096581416%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 0.7"></div>
+                            <div style="background-color: palevioletred; width: 7.352064917237625%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 2.0"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">6.2</span>
+                        pass: <span class="value" style="color: dodgerblue;">4.3</span>
+                        def: <span class="value" style="color: darkorange;">0.7</span>
+                        reb: <span class="value" style="color: palevioletred;">2.0</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        9
+                    </div>
+                    <div class="player-rank">
+                        own: #2 (24)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">18</span> pts
+                        <span class="value">6</span> ast
+                        <span class="value">4</span> reb
+                        <span class="value">1</span> stl
+                        <span class="value">0</span> blk
+                        <span class="value">1</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5176149" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5176149.png class="shadow-headshot">
+                            <br>
+                            #23
+                            David Thomas
+                            <br>
+                            6' 1"
+                            193 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        Mercer 
+                        <br>
+                        Southern
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/2382.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    win
+                     at 
+                    Furman
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401587976">
+                        82 - 75
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">13.1▲</span> 
+                        ez75: <span class="value">18.1</span>
+                        avg: <span class="value">6.8</span>
+                        std: <span class="value">3.7</span>
+                        max: <span class="value">14.3</span>
+                        <br>
+                        <span class="value">32</span> min
+                        <span class="value">54</span> poss
+                        <span class="value">17</span> usg
+                        <span class="value">67</span> ts
+                        <span class="value">1.21</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">2</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">1</span> midrange
+                        <span class="value">3</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">0</span> offense
+                        <span class="value">4</span> defense
+                        <br>
+                        2pt: <span class="value">5-8(4)</span>
+                        3pt: <span class="value">2-5(1)</span>
+                        ft: <span class="value">2-2</span>
+                        <br>
+                        dnk: <span class="value">0-0(0)</span>
+                        lay: <span class="value">3-4(2)</span>
+                        mid: <span class="value">2-4(2)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 28.84990374149686%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 8.0"></div>
+                            <div style="background-color: dodgerblue; width: 10.647922844224771%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 3.0"></div>
+                            <div style="background-color: darkorange; width: 3.363224831918772%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 0.9"></div>
+                            <div style="background-color: palevioletred; width: 4.331055566535611%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.2"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">8.0</span>
+                        pass: <span class="value" style="color: dodgerblue;">3.0</span>
+                        def: <span class="value" style="color: darkorange;">0.9</span>
+                        reb: <span class="value" style="color: palevioletred;">1.2</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        10
+                    </div>
+                    <div class="player-rank">
+                        own: #2 (16)
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">14</span> pts
+                        <span class="value">2</span> ast
+                        <span class="value">4</span> reb
+                        <span class="value">4</span> stl
+                        <span class="value">2</span> blk
+                        <span class="value">1</span> tov
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/5176653" class="btn-link">
+                        <div class="player-bio">
+                            <img src=https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/5176653.png class="shadow-headshot">
+                            <br>
+                            #2
+                            Jah Short
+                            <br>
+                            6' 3"
+                            180 lbs - SO - G
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        New Orleans 
+                        <br>
+                        Southland
+                        <br>
+                        <img src=https://a.espncdn.com/i/teamlogos/ncaa/500/2443.png class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    3/2
+                    Started in 
+                    win
+                     at 
+                    Incarnate Word
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/401579053">
+                        87 - 80
+                    </a>
+                </div>        
+                <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
+                <div class="stats">
+                    <div>
+                        ez: <span class="value">13.1▲</span> 
+                        ez75: <span class="value">11.7</span>
+                        avg: <span class="value">7.5</span>
+                        std: <span class="value">3.8</span>
+                        max: <span class="value">13.9</span>
+                        <br>
+                        <span class="value">39</span> min
+                        <span class="value">84</span> poss
+                        <span class="value">11</span> usg
+                        <span class="value">81</span> ts
+                        <span class="value">1.36</span> ppp
+                        <br>
+                        assists: 
+                        <span class="value">2</span> layup
+                        <span class="value">0</span> dunk
+                        <span class="value">0</span> midrange
+                        <span class="value">0</span> 3pt
+                        <br>
+                        rebounds: 
+                        <span class="value">1</span> offense
+                        <span class="value">3</span> defense
+                        <br>
+                        2pt: <span class="value">4-5(2)</span>
+                        3pt: <span class="value">1-3(0)</span>
+                        ft: <span class="value">3-3</span>
+                        <br>
+                        dnk: <span class="value">2-2(1)</span>
+                        lay: <span class="value">1-1(0)</span>
+                        mid: <span class="value">1-2(1)</span>
+                        <br>
+                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: 21.8216147437233%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: 6.1"></div>
+                            <div style="background-color: dodgerblue; width: 2.4055042331688243%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: 0.7"></div>
+                            <div style="background-color: darkorange; width: 16.90389349990732%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: 4.7"></div>
+                            <div style="background-color: palevioletred; width: 5.964178347886206%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: 1.7"></div>
+                        </div>                            
+                        score: <span class="value" style="color: forestgreen;">6.1</span>
+                        pass: <span class="value" style="color: dodgerblue;">0.7</span>
+                        def: <span class="value" style="color: darkorange;">4.7</span>
+                        reb: <span class="value" style="color: palevioletred;">1.7</span>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</body>
+</html>
