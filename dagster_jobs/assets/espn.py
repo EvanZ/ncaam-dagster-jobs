@@ -133,7 +133,7 @@ def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, 
     )
 
 @asset(
-    deps=[conferences_file],
+    deps=[teams_file],
     group_name=SEASONAL,
     compute_kind=DUCKDB  
 )
@@ -205,7 +205,7 @@ def rosters_files(context: AssetExecutionContext, database: DuckDBResource, stor
     )
 
 @asset(
-        group_name="udpate_annual",
+        group_name=SEASONAL,
         compute_kind=DUCKDB,
         deps=[rosters_files]
 )
@@ -231,13 +231,16 @@ def stage_players(context: AssetExecutionContext, database: DuckDBResource, stor
 
 @asset(
     group_name=SEASONAL,
-    compute_kind=DUCKDB
+    compute_kind=DUCKDB,
+    config_schema={
+        "path": str
+    }
 )
-def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
+def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     """
     stage rsci rankings from csv files
     """
-    path = os.path.join(storage.filepath, "rsci", "*.csv")
+    path = os.path.join(context.op_config["path"], "*.csv")
     context.log.info(path)
 
     with database.get_connection() as conn:
@@ -602,7 +605,7 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-        player_card_template = env.get_template("player_cards_template.html")
+        player_card_template = env.get_template("player_cards_template_all_classes.html")
 
         # Convert DataFrame to a list of dictionaries
         players = df.to_dict(orient="records")
@@ -625,3 +628,4 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
 freshmen_tl = build_top_lines_html_table(exp=[0,1], name="freshmen")
 sophomores_tl = build_top_lines_html_table(exp=[2], name="sophomores")
 upperclassmen_tl = build_top_lines_html_table(exp=[3,4,5], name="upperclassmen")
+all_tl = build_top_lines_html_table(exp=[0,1,2,3,4,5], name="all")

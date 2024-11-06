@@ -1013,10 +1013,11 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         from stage_top_lines
     )
     select
-        rank() over (order by ez desc)        as class_rank,
+        rank() over (partition by experience_abbreviation order by ez desc)        as class_rank,
         g.player_id,
         g.game_id,
         games,
+        RSCI as recruit_rank,
         case when home then team_2_logo else team_1_logo end as team_logo,
         case when home then team_2_location else team_1_location end as team_location,
         case when home then team_1_logo else team_2_logo end as opp_logo,
@@ -1036,18 +1037,6 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         g.date,
         home,
         starter,
-        concat('<img width=150 src=\"', headshot_href, '\">', '<br>',
-            display_name, ' #', jersey, '<br>',
-            experience_abbreviation, ' ', position_abbreviation, ' ', display_height, ' ', display_weight) as bio,
-        concat('<img width=72 src=\"', case when home then team_2_logo else team_1_logo end, '\">', '<br>',
-            case when home then team_2_location else team_1_location end, '-', 
-            case when home then team_2_pts else team_1_pts end, '<br>',
-            t1.shortConferenceName) as team,
-        concat('<img width=72 src=\"', case when home then team_1_logo else team_2_logo end, '\">', '<br>',
-            case when home then team_1_location else team_2_location end, '-',
-            case when home then team_1_pts else team_2_pts end, '<br>',
-            t2.shortConferenceName) as opp,
-        concat(g.minutes, ' min', '<br>', cast(g.minutes*poss/sgl.minutes as INT), ' poss') as game,
         g.minutes,
         cast(g.minutes*poss/sgl.minutes as INT) as poss,
         struct_pack(
@@ -1061,20 +1050,6 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
                 end,
             ppp:=round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2)
         ) as usg_struct,
-        concat(
-            stats.ftm + 2*stats.fgm + stats.fg3m, ' pts', '<br>',
-            cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT), ' ts', '<br>',
-            case when home 
-            then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
-                                (sgl.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
-            else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
-                                (sgl.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
-            end,
-            ' usg','<br>',
-            round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2), ' ppp'
-
-        ) as usg, 
-        round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2) as ppp,
         struct_pack(
             twos:= concat(stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, '(', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')'), 
             dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, '(', shots.unast_dunk, ')'), 
@@ -1083,30 +1058,7 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             threes:= concat(stats.fg3m, '-', stats.fg3a, '(', shots.unast_3pt, ')'),
             fts:= concat(stats.ftm, '-', stats.fta)
         ) as shots_struct,
-        concat(
-            stats.ast, ' ast', '<br>',
-            stats.tov, ' tov', '<br>',
-            stats.stl, ' stl', '<br>',
-            stats.blk, ' blk', '<br>',
-            stats.orb, ' orb', '<br>',
-            stats.drb, ' drb', '<br>'
-        ) as box,
         stats,
-        concat(
-            'ez: ', 
-            case
-                   when ez > mu + 2.0 * sigma then round(cast(ez as numeric),1) 
-                   when ez > mu + 1.0 * sigma then round(cast(ez as numeric),1)
-                   when ez < mu - 1.0 * sigma then round(cast(ez as numeric),1)
-                   when ez < mu - 2.0 * sigma then round(cast(ez as numeric),1) 
-                   else round(cast(ez as numeric),1)
-            end, '<br>', 
-            'ez75: ', round(75*ez*sgl.minutes/(g.minutes*poss), 1), '<br>',
-            'avg: ',round(cast(mu as numeric), 1),'<br>',
-            'std: ',round(cast(sigma as numeric), 1), '<br>',
-            'max: ', round(cast(inf as numeric), 1), '<br>',
-            'med: ', round(cast(med as numeric), 1)
-        ) as ez,
         struct_pack(
             ez:=case
                    when ez > mu + 2.0 * sigma then round(cast(ez as double),1) 
