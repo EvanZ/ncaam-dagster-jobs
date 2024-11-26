@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            color: rgb(63, 63, 63);
+        }
+        h1 {
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1em;
+            width: 100vw;
+        }
+        .card {
+            border-radius: 2em;
+            box-shadow: 0 2px 4px lightgrey;
+            overflow: hidden;
+            transition: 0.3s;
+            padding: 1em;
+        }
+        .high-rank {
+            background-color: lightyellow;
+        }
+        .low-rank {
+            background-color: snow;
+        }
+        .card:hover {
+            box-shadow: 0em 0em 0.5em gray;
+            transition: 0.5s;
+        }
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: left;
+            }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        .class-rank {
+            position: relative;
+            margin-left: -3em;
+            margin-bottom: -1em;
+            color: black;
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .player-name {
+            margin: 0;
+        }
+        .player-bio {
+            font-size: 1em;
+            text-align: center;
+        }
+        .game-info {
+            display: block;
+            margin-top: 0.5em;
+            /* color: black; */
+        }
+        .stats {
+            /* color: gray; */
+            margin-top: 0.5em;
+        }
+        .btn-link {
+            text-decoration: none;
+        }
+        .player-rank {
+            display: inline-block;
+            color: gray;
+        }    
+        .player-row {
+            display: flex;
+            gap: 1em;
+        }
+        .shadow-headshot {
+            width: 200px;
+            height: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        .missing-headshot {
+            width: 150px;
+            height: auto;
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        .team-logo {
+            width: 150px;
+            height: auto;
+            display: inline-block;
+        }
+        .value {
+            color: cornflowerblue;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        @media (max-width: 1600px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1em;
+            }
+            .team-logo {
+                height: 150px;
+                width: auto;
+            }
+            .shadow-headshot, .missing-headshot {
+                height: 150px;
+                width: auto;
+            }
+        }
+        @media (max-width: 1250px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1em;
+            }
+            .team-logo {
+                height: 100px;
+                width: auto;
+            }
+            .shadow-headshot, .missing-headshot {
+                height: 100px;
+                width: auto;
+            }
+        }
+        @media (max-width: 750px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+            .shadow-headshot, .missing-headshot {
+                height: 100px;
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+    <h1>
+        {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+    </h1>
+    <div class="grid-container">
+        {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
+        {% for player in players if ((player.experience_abbreviation in class) and (player.class_rank <= 50)) %}
+        <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}">
+            <div class="card-content">
+                <div class="player-row">
+                    <div class="class-rank">
+                        {{ player.class_rank }}
+                        {% if player.notable in ['▲▲','▲'] %}
+                        <span style="font-size: 0.75em;color: green">{{ player.notable }}</span>
+                        {% elif player.notable in ['▼▼','▼'] %}
+                        <span style="font-size: 0.75em;color: red">{{ player.notable }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="player-rank">
+                        #{{ player.game_rank }}/{{ player.games }}
+                    </div>    
+                    <div class="player-rank">
+                        <span class="value">{{ player.usg_struct.pts }}</span>p
+                        <span class="value">&#32;{{ player.stats.ast }}</span>a
+                        <span class="value">&#32;{{ player.stats.tov }}</span>t
+                        <span class="value">&#32;{{ player.stats.orb+player.stats.drb }}</span>r
+                        <span class="value">&#32;{{ player.stats.stl }}</span>s
+                        <span class="value">&#32;{{ player.stats.blk }}</span>b
+                    </div>
+                </div>
+                <div class="card-header">
+                    <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                        <div class="player-bio">
+                            {% if player.headshot_href %}
+                            <img src={{ player.headshot_href }} class="shadow-headshot">
+                            {% else %}
+                            <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                            {% endif %}
+                            <br>
+                            #{{ player.jersey | int }}
+                            {{ player.display_name }}
+                            {% if player.recruit_rank>0 %}({{ player.recruit_rank | int}}){% endif %}
+                           <br>
+                            {{ player.display_height }}
+                            {{ player.display_weight }} - {{ player.experience_abbreviation }} - {{ player.position_abbreviation }}
+                        </div>    
+                    </a>
+                    <div class="player-bio">
+                        {{ player.team_location}} 
+                        <br>
+                        {{ player.team_conf }}
+                        <br>
+                        <img src={{ player.team_logo}} class="team-logo">
+                    </div>
+                </div> 
+                <div class="game-info">
+                    {{ player.date.strftime('%-m/%-d') }}
+                    {% if player.starter %}Started in {% else %}Came off bench in {% endif %}
+                    {% if (player.team_pts-player.opp_pts) > 0 %}win{% else %}loss{% endif %}
+                    {% if player.home %} vs {% else %} at {% endif %}
+                    {{ player.opp_location }}
+                    <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/{{ player.game_id }}">
+                        {{ player.team_pts }} - {{ player.opp_pts }}
+                    </a>
+                </div> 
+                <div class="stats">
+                    <div>
+                        <span class="value">{{ player.minutes }}</span>mp
+                        <span class="value">&#32;{{ player.poss }}</span>pos
+                        <span class="value">&#32;{{ player.usg_struct.usg }}</span>usg
+                        <span class="value">&#32;{{ player.usg_struct.ts }}</span>ts
+                        <span class="value">&#32;{{ player.usg_struct.ppp }}</span>ppp
+                        <br>
+                        ast: 
+                        {% if player.stats.ast > 0 %}
+                        <span class="value">{{ player.assists.layups }}</span>lay
+                        <span class="value">&#32;{{ player.assists.dunks }}</span>dnk
+                        <span class="value">&#32;{{ player.assists.midrange }}</span>mid
+                        <span class="value">&#32;{{ player.assists.threes }}</span>3pt
+                        {% else %}
+                        <span class="value">0</span>lay
+                        <span class="value">&#32;0</span>dnk
+                        <span class="value">&#32;0</span>mid
+                        <span class="value">&#32;0</span>3pt
+                        {% endif %}
+                        <br>
+                        reb: 
+                        <span class="value">{{ player.stats.orb }}</span>off
+                        <span class="value">&#32;{{ player.stats.drb }}</span>def
+                        <br>
+                        2pt&#32;<span class="value">{{ player.shots_struct.twos }}</span>
+                        3pt&#32;<span class="value">&#32;{{ player.shots_struct.threes }}</span>
+                        ft&#32;<span class="value">&#32;{{ player.shots_struct.fts }}</span>
+                        <br>
+                        dnk&#32;<span class="value">{{ player.shots_struct.dunks }}</span>
+                        lay&#32;<span class="value">&#32;{{ player.shots_struct.layups }}</span>
+                        mid&#32;<span class="value">&#32;{{ player.shots_struct.midrange }}</span>
+                        <br>
+                        <span class="value">{{ player.ez_struct.ez75 }}</span>ez75
+                        {% if player.games >= 7 %}
+                        &#32;<span class="value">{{ player.ez_struct.avg }}</span>avg
+                        <span class="value">{{ player.ez_struct.std }}</span>std
+                        {% else %}
+                        &#32;<span class="value">{{ player.ez_struct.med }}</span>med
+                        {% endif %}
+                        &#32;<span class="value">{{ player.ez_struct.max }}</span>max
+                        <br>
+                        <div style="display: flex; height: 1em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                            <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
+                            <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
+                            <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
+                            <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
+                            <div><span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span>ez</div>
+                        </div>                            
+                        <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>score
+                        <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>pass
+                        <span class="value" style="color: darkorange;">{{ player.ez_components.stocks | round(1) }}</span>def
+                        <span class="value" style="color: palevioletred;">{{ player.ez_components.rebounding | round(1) }}</span>reb
+                        <br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</body>
+</html>

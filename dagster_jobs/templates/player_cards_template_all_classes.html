@@ -20,15 +20,20 @@
             width: 100vw;
         }
         .card {
-            background-color: snow;
             border-radius: 2em;
             box-shadow: 0 2px 4px lightgrey;
             overflow: hidden;
             transition: 0.3s;
             padding: 1em;
         }
+        .high-rank {
+            background-color: lightyellow;
+        }
+        .low-rank {
+            background-color: snow;
+        }
         .card:hover {
-            box-shadow: 0em 0em 0.5em goldenrod;
+            box-shadow: 0em 0em 0.5em gray;
             transition: 0.5s;
         }
         .card-content {
@@ -87,6 +92,12 @@
             /* Optional: Prevent surrounding div issues */
             display: inline-block;
         }
+        .missing-headshot {
+            width: 200px;
+            height: auto;
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
         .team-logo {
             width: 150px;
             height: auto;
@@ -122,14 +133,15 @@
     <div class="grid-container">
         {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
         {% for player in players if (player.experience_abbreviation in ['FR']  and player.class_rank <= 50) %}
-        <div class="card">
+        <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}">
             <div class="card-content">
                 <div class="player-row">
                     <div class="class-rank">
                         {{ player.class_rank }}
                     </div>
+                    <div class="value">{{ player.ez_struct.ez }}{{ player.notable }}</div>
                     <div class="player-rank">
-                        own: #{{ player.game_rank }} ({{ player.games }})
+                        own: #{{ player.game_rank }}/{{ player.games }}
                     </div>    
                     <div class="player-rank">
                         <span class="value">{{ player.usg_struct.pts }}</span> pts
@@ -143,7 +155,11 @@
                 <div class="card-header">
                     <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" class="btn-link">
                         <div class="player-bio">
+                            {% if player.headshot_href %}
                             <img src={{ player.headshot_href }} class="shadow-headshot">
+                            {% else %}
+                            <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                            {% endif %}
                             <br>
                             #{{ player.jersey | int }}
                             {{ player.display_name }}
@@ -174,7 +190,6 @@
                 <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
                 <div class="stats">
                     <div>
-                        ez: <span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span> 
                         ez75: <span class="value">{{ player.ez_struct.ez75 }}</span>
                         avg: <span class="value">{{ player.ez_struct.avg }}</span>
                         std: <span class="value">{{ player.ez_struct.std }}</span>
@@ -204,11 +219,12 @@
                         lay: <span class="value">{{ player.shots_struct.layups }}</span>
                         mid: <span class="value">{{ player.shots_struct.midrange }}</span>
                         <br>
-                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                        <div style="display: flex; height: 1em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
                             <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
                             <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
                             <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
                             <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
+                            <div><span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span></div>
                         </div>                            
                         score: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
                         pass: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>
@@ -225,14 +241,15 @@
     <div class="grid-container">
         {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
         {% for player in players if (player.experience_abbreviation in ['SO']  and player.class_rank <= 50) %}
-        <div class="card">
+        <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}">
             <div class="card-content">
                 <div class="player-row">
                     <div class="class-rank">
                         {{ player.class_rank }}
                     </div>
+                    <div class="value">{{ player.ez_struct.ez }}{{ player.notable }}</div>
                     <div class="player-rank">
-                        own: #{{ player.game_rank }} ({{ player.games }})
+                        own: #{{ player.game_rank }}/{{ player.games }}
                     </div>    
                     <div class="player-rank">
                         <span class="value">{{ player.usg_struct.pts }}</span> pts
@@ -246,12 +263,16 @@
                 <div class="card-header">
                     <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" class="btn-link">
                         <div class="player-bio">
+                            {% if player.headshot_href %}
                             <img src={{ player.headshot_href }} class="shadow-headshot">
+                            {% else %}
+                            <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                            {% endif %}
                             <br>
-                            #{{ player.jersey | int}}
+                            #{{ player.jersey | int }}
                             {{ player.display_name }}
                             {% if player.recruit_rank>0 %}({{ player.recruit_rank | int}}){% endif %}
-                            <br>
+                           <br>
                             {{ player.display_height }}
                             {{ player.display_weight }} - {{ player.experience_abbreviation }} - {{ player.position_abbreviation }}
                         </div>    
@@ -277,7 +298,6 @@
                 <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
                 <div class="stats">
                     <div>
-                        ez: <span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span> 
                         ez75: <span class="value">{{ player.ez_struct.ez75 }}</span>
                         avg: <span class="value">{{ player.ez_struct.avg }}</span>
                         std: <span class="value">{{ player.ez_struct.std }}</span>
@@ -307,11 +327,12 @@
                         lay: <span class="value">{{ player.shots_struct.layups }}</span>
                         mid: <span class="value">{{ player.shots_struct.midrange }}</span>
                         <br>
-                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                        <div style="display: flex; height: 1em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
                             <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
                             <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
                             <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
                             <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
+                            <div><span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span></div>
                         </div>                            
                         score: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
                         pass: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>
@@ -328,14 +349,15 @@
     <div class="grid-container">
         {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
         {% for player in players if (player.experience_abbreviation in ['JR']  and player.class_rank <= 50) %}
-        <div class="card">
+        <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}">
             <div class="card-content">
                 <div class="player-row">
                     <div class="class-rank">
                         {{ player.class_rank }}
                     </div>
+                    <div class="value">{{ player.ez_struct.ez }}{{ player.notable }}</div>
                     <div class="player-rank">
-                        own: #{{ player.game_rank }} ({{ player.games }})
+                        own: #{{ player.game_rank }}/{{ player.games }}
                     </div>    
                     <div class="player-rank">
                         <span class="value">{{ player.usg_struct.pts }}</span> pts
@@ -349,12 +371,16 @@
                 <div class="card-header">
                     <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" class="btn-link">
                         <div class="player-bio">
+                            {% if player.headshot_href %}
                             <img src={{ player.headshot_href }} class="shadow-headshot">
+                            {% else %}
+                            <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                            {% endif %}
                             <br>
                             #{{ player.jersey | int }}
                             {{ player.display_name }}
                             {% if player.recruit_rank>0 %}({{ player.recruit_rank | int}}){% endif %}
-                            <br>
+                           <br>
                             {{ player.display_height }}
                             {{ player.display_weight }} - {{ player.experience_abbreviation }} - {{ player.position_abbreviation }}
                         </div>    
@@ -380,7 +406,6 @@
                 <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
                 <div class="stats">
                     <div>
-                        ez: <span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span> 
                         ez75: <span class="value">{{ player.ez_struct.ez75 }}</span>
                         avg: <span class="value">{{ player.ez_struct.avg }}</span>
                         std: <span class="value">{{ player.ez_struct.std }}</span>
@@ -410,11 +435,12 @@
                         lay: <span class="value">{{ player.shots_struct.layups }}</span>
                         mid: <span class="value">{{ player.shots_struct.midrange }}</span>
                         <br>
-                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                        <div style="display: flex; height: 1em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
                             <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
                             <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
                             <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
                             <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
+                            <div><span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span></div>
                         </div>                            
                         score: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
                         pass: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>
@@ -431,14 +457,15 @@
     <div class="grid-container">
         {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
         {% for player in players if (player.experience_abbreviation in ['SR']  and player.class_rank <= 50) %}
-        <div class="card">
+        <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}">
             <div class="card-content">
                 <div class="player-row">
                     <div class="class-rank">
                         {{ player.class_rank }}
                     </div>
+                    <div class="value">{{ player.ez_struct.ez }}{{ player.notable }}</div>
                     <div class="player-rank">
-                        own: #{{ player.game_rank }} ({{ player.games }})
+                        own: #{{ player.game_rank }}/{{ player.games }}
                     </div>    
                     <div class="player-rank">
                         <span class="value">{{ player.usg_struct.pts }}</span> pts
@@ -452,12 +479,16 @@
                 <div class="card-header">
                     <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}" class="btn-link">
                         <div class="player-bio">
+                            {% if player.headshot_href %}
                             <img src={{ player.headshot_href }} class="shadow-headshot">
+                            {% else %}
+                            <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                            {% endif %}
                             <br>
                             #{{ player.jersey | int }}
                             {{ player.display_name }}
                             {% if player.recruit_rank>0 %}({{ player.recruit_rank | int}}){% endif %}
-                            <br>
+                           <br>
                             {{ player.display_height }}
                             {{ player.display_weight }} - {{ player.experience_abbreviation }} - {{ player.position_abbreviation }}
                         </div>    
@@ -483,7 +514,6 @@
                 <hr style="border: none; height: 2px; background-color: #f0f0f0; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(255, 255, 255, 0.7);">
                 <div class="stats">
                     <div>
-                        ez: <span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span> 
                         ez75: <span class="value">{{ player.ez_struct.ez75 }}</span>
                         avg: <span class="value">{{ player.ez_struct.avg }}</span>
                         std: <span class="value">{{ player.ez_struct.std }}</span>
@@ -513,11 +543,12 @@
                         lay: <span class="value">{{ player.shots_struct.layups }}</span>
                         mid: <span class="value">{{ player.shots_struct.midrange }}</span>
                         <br>
-                        <div style="display: flex; height: 0.75em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
+                        <div style="display: flex; height: 1em; width: 100%; background-color: #f0f0f0; overflow: hidden; ">
                             <div style="background-color: forestgreen; width: {{ 100*player.ez_components.scoring/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Scoring: {{ player.ez_components.scoring | round(1) }}"></div>
                             <div style="background-color: dodgerblue; width: {{ 100*player.ez_components.passing/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Passing: {{ player.ez_components.passing | round(1) }}"></div>
                             <div style="background-color: darkorange; width: {{ 100*player.ez_components.stocks/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Stocks: {{ player.ez_components.stocks | round(1) }}"></div>
                             <div style="background-color: palevioletred; width: {{ 100*player.ez_components.rebounding/max_ez }}%; display: flex; align-items: center; justify-content: center; color: white;" title="Rebounding: {{ player.ez_components.rebounding | round(1) }}"></div>
+                            <div><span class="value">{{ player.ez_struct.ez }}{{ player.notable }}</span></div>
                         </div>                            
                         score: <span class="value" style="color: forestgreen;">{{ player.ez_components.scoring | round(1) }}</span>
                         pass: <span class="value" style="color: dodgerblue;">{{ player.ez_components.passing | round(1) }}</span>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            color: rgb(63, 63, 63);
+        }
+        #toplines table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 0.5em;
+        }
+        #toplines th, #toplines td {
+            border: 1px solid lightgray;
+            text-align: center;
+            /* border-radius: 8px; */
+        }
+        #toplines th {
+            color: black;
+            font-weight: normal;
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            border: none;
+        }
+        #toplines td {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: black;
+            padding: 0.25em;
+        }
+        #toplines h1 {
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        #toplines .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            width: 100vw;
+        }
+        #toplines .card {
+            border-radius: 1em;
+            box-shadow: 0 2px 4px lightgrey;
+            padding: 0em;
+        }
+        #toplines .high-rank {
+            border: solid 0.25em darkred;
+        }
+        #toplines .low-rank {
+            border: none;
+        }
+        #toplines .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: left;
+            }
+        #toplines .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        #toplines .class-rank {
+            position: relative;
+            margin-left: 0em;
+            color: black;
+            font-size: 2em;
+            font-weight: bold;
+        }
+        #toplines .player-name {
+            margin: 0;
+        }
+        #toplines .player-bio {
+            font-size: 1em;
+            text-align: center;
+        }
+        #toplines .game-info {
+            display: block;
+            text-align: center;
+            margin-top: 1em;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            /* color: black; */
+        }
+        #toplines .stats {
+            /* color: gray; */
+            margin-top: 0.5em;
+        }
+        #toplines .btn-link {
+            text-decoration: none;
+        }
+        #toplines .player-rank {
+            display: block;
+            font-size: 1.5em;
+            align-content:center;
+            color: gray;
+        }    
+        #toplines .player-row {
+            display: flex;
+            gap: 1em;
+        }
+        #toplines .shadow-headshot {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .missing-headshot {
+            height: 100px;
+            width: auto;
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .team-logo {
+            width: 100px;
+            height: auto;
+            display: inline-block;
+        }
+        #toplines .value {
+            color: cornflowerblue;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        @media (max-width: 1600px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 1250px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 750px) {
+            #toplines .grid-container {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set TD_ALPHA = "70%" %}
+    <div id="toplines">
+        <div>
+            <h1>
+                {% if dates.start==dates.end %}
+                Top Lines for {{ dates.end }}
+                {% else %}
+                Top Lines for {{ dates.start }} to {{ dates.end }}
+                {% endif %}
+            </h1>
+            <div>
+                <h2>
+                    <a href="https://patreon.com/toplines?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink">Support our Patreon</a> with just $3/month for exclusive insights and full season rankings delivered monthly!
+                </h2>
+            </div>
+            <div>
+                <h1>Notes</h1>
+                <h4>
+                    <ul>
+                        <li>Age, if available, is given on Draft Night (June 25, 2025).</li>
+                        <li>Next to class ranking is personal game rank (eg #3/8=3rd best game out of 8 played)</li>
+                        <li>
+                            <table style="width: fit-content;">
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(60, 80%, 50%, 70%);">7.4&mu;</td>
+                                        <td>is the season average ez game score</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                       </li>
+                        <li>▲=1 std dev above season avg ▲▲=2 std dev</li>
+                        <li>Unassisted makes are given by a number followed by "u" (eg 3u)</li>
+                        <li>Top 100 RSCI have red border.</li>
+                    </ul>        
+                </h4>
+            </div>
+            <div>
+                <h1>
+                    Color Legend
+                </h1>
+                <div>
+                    <h4>Colors represent percentiles for each stat. 
+                        Percentile calculations are within class and with respect to the dates of the report.
+                        Box score totals (pts, ast, etc) are normalized to 100 possessions for percentile calculations.
+                        Shot type percentiles (dunks, layups, etc) are the given for the ratio of the shot type to total fga. 
+                        So, for example, the color for the "fts" cell is equivalent to the standard definition of FTR (fta/fga).
+                    </h4>    
+                </div>
+                <div>
+                    <table>
+                        <tr>
+                            <!-- Cells with different background colors -->
+                            <td style="background-color: hsla(60, 0%, 50%, {{ TD_ALPHA }});">10%</td>
+                            <td style="background-color: hsla(60, 10%, 50%, {{ TD_ALPHA }});">20%</td>
+                            <td style="background-color: hsla(60, 20%, 50%, {{ TD_ALPHA }});">30%</td>
+                            <td style="background-color: hsla(60, 30%, 50%, {{ TD_ALPHA }});">40%</td>
+                            <td style="background-color: hsla(60, 40%, 50%, {{ TD_ALPHA }});">50%</td>
+                            <td style="background-color: hsla(60, 50%, 50%, {{ TD_ALPHA }});">60%</td>
+                            <td style="background-color: hsla(60, 60%, 50%, {{ TD_ALPHA }});">70%</td>
+                            <td style="background-color: hsla(60, 70%, 50%, {{ TD_ALPHA }});">80%</td>
+                            <td style="background-color: hsla(60, 80%, 50%, {{ TD_ALPHA }});">90%</td>
+                            <td style="background-color: hsla(60, 100%, 50%, {{ TD_ALPHA }});">100%</td>
+                        </tr>
+                    </table>        
+                </div>
+            </div>
+        </div>
+        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        <div>
+            <h1>
+                {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+            </h1>    
+        </div>
+        <div class="grid-container">
+            {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.class_rank <= 50)) %}
+            <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
+                style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
+                    url('{{ player.team_logo}}');
+                    background-size:contain; background-position: center;">
+                <div class="card-content" >
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ player.class_rank }}
+                            {% if player.notable in ['▲▲','▲'] %}
+                            <span style="font-size: 0.75em;color: green">{{ player.notable }}</span>
+                            {% elif player.notable in ['▼▼','▼'] %}
+                            <span style="font-size: 0.75em;color: red">{{ player.notable }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="player-rank">
+                            #{{ player.game_rank }}/{{ player.games }}
+                        </div>
+                        <div>
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        {% if player.games >= 7 %}
+                                        <td style="background-color: hsla(60, {{ player.ez_struct.avgpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.ez_struct.avg }}&mu;</td>
+                                        {% else %}
+                                        <td style="background-color: hsla(60, {{ player.ez_struct.medpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.ez_struct.med }}&mu;</td>
+                                        {% endif %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-header">
+                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                            <div class="player-bio">
+                                {% if player.headshot_href %}
+                                <img src={{ player.headshot_href }} class="shadow-headshot">
+                                {% else %}
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                                {% endif %}
+                                <br>
+                                #{{ player.jersey | int }}
+                                {{ player.display_name }}
+                            </div>    
+                        </a>
+                        <div class="player-bio">
+                            {{ player.display_height }} 
+                            {% if player.display_weight %}
+                            {{ player.display_weight }}
+                            {% endif %}
+                            <br>
+                            {{ player.experience_display_value }}&nbsp;{{ player.position_display_name }}
+                            <br>
+                            {% if player.state %}
+                            {{ player.city }}, {{ player.state }}
+                            {% else %}
+                            {{ player.city }}, {{ player.country }}
+                            {% endif %}  
+                            <br>  
+                            {{ player.team_location}}
+                            <br>
+                            {{ player.team_conf }}
+                            {% if player.age_at_draft>0 %}
+                            <br>
+                            Age {{ (player.age_at_draft/365) | round(1) }}
+                            {% endif %}
+                            {% if player.recruit_rank>0 %}
+                            <br>
+                            #{{ player.recruit_rank | int}} RSCI
+                            {% endif %}
+                        </div>
+                    </div> 
+                    <div class="game-info">
+                        {{ player.display_name }}
+                        {% if player.starter %}played {{ player.minutes }} minutes as starter in {% else %}played {{ player.minutes }} minutes off the bench in {% endif %}
+                        {% if (player.team_pts-player.opp_pts) > 0 %}win{% else %}loss{% endif %}
+                        {% if player.home %} vs {% else %} at {% endif %}
+                        {{ player.opp_location }}
+                        <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/{{ player.game_id }}">
+                            {{ player.team_pts }} - {{ player.opp_pts }}
+                        </a>
+                        on {{ player.date.strftime('%-m/%-d') }}.
+                    </div> 
+                    <div class="stats">
+                        <div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>pts</th>
+                                        <th>ast</th>
+                                        <th>tov</th>
+                                        <th>orb</th>
+                                        <th>drb</th>
+                                        <th>reb</th>
+                                        <th>stl</th>
+                                        <th>blk</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.pts }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.pts }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.ast }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.ast }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.tov }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.tov }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.orb }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.orb }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.drb }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.drb }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.reb }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.orb + player.stats.drb }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.stl }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.stl }}</td>
+                                        <td style="background-color: hsla(60, {{ player.percentiles.blk }}%, 50%, {{ TD_ALPHA }});">{{ player.stats.blk }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>                        
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>usg%</th>
+                                        <th>ts%</th>
+                                        <th>ppp</th>
+                                        <th>ast%</th>
+                                        <th>tov%</th>
+                                        <th>orb%</th>
+                                        <th>drb%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.usgpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.usg }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.tspctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.ts }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.ppppctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.ppp }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.astpctpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.astpct }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.tovpctpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.tovpct }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.orbpctpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.orbpct }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.drbpctpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.usg_struct.drbpct }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>dunk</th>
+                                        <th>layup</th>
+                                        <th>mid</th>
+                                        <th>2pt</th>
+                                        <th>3pt</th>
+                                        <th>ft</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(60, {{ player.shots_struct.dunkspctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.dunks }}</td>
+                                        <td style="background-color: hsla(60, {{ player.shots_struct.layupspctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.layups }}</td>
+                                        <td style="background-color: hsla(60, {{ player.shots_struct.midrangepctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.midrange }}</td>
+                                        <td style="background-color: hsla(60, {{ player.shots_struct.twospctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.twos }}</td>
+                                        <td style="background-color: hsla(60, {{ player.shots_struct.threespctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.threes }}</td>
+                                        <td style="background-color: hsla(60, {{ player.usg_struct.ftrpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.fts }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>dunk ast</th>
+                                        <th>lay ast</th>
+                                        <th>mid ast</th>
+                                        <th>2pt ast</th>
+                                        <th>3pt ast</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if player.stats.ast > 0 %}
+                                    <tr>
+                                        <td>{{ player.assists.dunks }}</td>
+                                        <td>{{ player.assists.layups }}</td>
+                                        <td>{{ player.assists.midrange }}</td>
+                                        <td>{{ player.assists.layups + player.assists.dunks + player.assists.midrange }}</td>
+                                        <td>{{ player.assists.threes }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>                        
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}    
+    </div>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            color: rgb(63, 63, 63);
+        }
+        #toplines table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 0.25em;
+        }
+        #toplines th, #toplines td {
+            border: 1px solid lightgray;
+            text-align: center;
+            /* border-radius: 8px; */
+        }
+        #toplines th {
+            color: black;
+            font-weight: normal;
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            border: none;
+        }
+        #toplines td {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: darkslateblue;
+            padding: 0.25em;
+        }
+        #toplines h1 {
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        #toplines .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            width: 100vw;
+        }
+        #toplines .card {
+            border-radius: 1em;
+            box-shadow: 0 2px 4px lightgrey;
+            padding: 0em;
+        }
+        #toplines .high-rank {
+            border: solid 0.25em darkred;
+        }
+        #toplines .low-rank {
+            border: none;
+        }
+        #toplines .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: left;
+            }
+        #toplines .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        #toplines .class-rank {
+            position: relative;
+            margin-left: 0em;
+            color: black;
+            font-size: 2em;
+            font-weight: bold;
+        }
+        #toplines .player-name {
+            margin: 0;
+        }
+        #toplines .player-bio {
+            font-size: 1em;
+            text-align: center;
+        }
+        #toplines .game-info {
+            display: block;
+            text-align: center;
+            margin-top: 1em;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            /* */
+        }
+        #toplines .stats {
+            /* color: gray; */
+            margin-top: 0.5em;
+        }
+        #toplines .btn-link {
+            text-decoration: none;
+        }
+        #toplines .player-rank {
+            display: block;
+            font-size: 1.5em;
+            align-content:center;
+            color: gray;
+        }    
+        #toplines .player-row {
+            display: flex;
+            gap: 1em;
+        }
+        #toplines .shadow-headshot {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .missing-headshot {
+            height: 100px;
+            width: auto;
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .team-logo {
+            width: 100px;
+            height: auto;
+            display: inline-block;
+        }
+        #toplines .value {
+            color: cornflowerblue;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        @media (max-width: 1600px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 1250px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 750px) {
+            #toplines .grid-container {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set TD_ALPHA = "70%" %}
+    <div id="toplines">
+        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        <h1>
+            {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+        </h1>
+        <div class="grid-container">
+            {% for player in players if ((player.experience_abbreviation in class) and (player.class_rank <= 75)) %}
+            <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
+                style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
+                    url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
+                    background-size:contain; background-position: center;">
+                <div class="card-content">
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ player.class_rank }}
+                        </div>
+                    </div>
+                    <div class="card-header">
+                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                            <div class="player-bio">
+                                {% if player.headshot_href %}
+                                <img src={{ player.headshot_href }} class="shadow-headshot">
+                                {% else %}
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/cb6d99af-d2b5-878e-20cd-dbdff6a5a2e3.jpg" class="missing-headshot">
+                                {% endif %}
+                                <br>
+                                #{{ player.jersey | int }}
+                                {{ player.display_name }}
+                            </div>    
+                        </a>
+                        <div class="player-bio">
+                            {{ player.display_height }} 
+                            {% if player.display_weight %}
+                            {{ player.display_weight }}
+                            {% endif %}
+                            <br>
+                            {{ player.experience_display_value }}&nbsp;{{ player.position_display_name }}
+                            <br>
+                            {% if player.state %}
+                            {{ player.city }}, {{ player.state }}
+                            {% else %}
+                            {{ player.city }}, {{ player.country }}
+                            {% endif %}  
+                            <br>  
+                            {{ player.team_location}}
+                            <br>
+                            {{ player.team_conf }}
+                            {% if player.age_at_draft>0 %}
+                            <br>
+                            Age {{ (player.age_at_draft/365) | round(1) }}
+                            {% endif %}
+                            {% if player.recruit_rank>0 %}
+                            <br>
+                            #{{ player.recruit_rank | int}} RSCI
+                            {% endif %}
+                        </div>
+                    </div> 
+                    <div class="stats">
+                        <table>
+                            <tr>
+                                <th>gs</th>
+                                <th>gp</th>
+                                <th>mpg</th>
+                                <th>ts%</th>
+                                <th>usg%</th>
+                                <th>ppp</th>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {{ player.gs | int }}
+                                </td>
+                                <td>
+                                    {{ player.gp | int }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.mpgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ (player.minutes / player.gp) | round | int }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.tspctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.ts | int }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.usgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.usg | int }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.ppppctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.ppp | round(2) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                              <th>pts</th>
+                              <th>ast</th>
+                              <th>reb</th>
+                              <th>stl</th>
+                              <th>blk</th>
+                              <th>tov</th>
+                            </tr>
+                            <tr>
+                                <td style="background-color: hsla(60, {{ player.ppgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.ppg | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.apgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.apg | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.rpgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.rpg | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.spgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.spg | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.bpgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.bpg | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.tpgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.tpg | round(1) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                              <th>dnk</th>
+                              <th>dnk%</th>
+                              <th>lay</th>
+                              <th>lay%</th>
+                              <th>mid</th>
+                              <th>mid%</th>
+                            </tr>
+                            <tr>
+                                <td style="background-color: hsla(60, {{ player.shooting.dunka100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shots.ast_dunk + player.shots.unast_dunk }}-{{ player.shots.ast_dunk + player.shots.unast_dunk + player.shots.miss_dunk }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.dunkpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.dunkpct | int }}%
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.layupa100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shots.ast_layup + player.shots.unast_layup }}-{{ player.shots.ast_layup + player.shots.unast_layup + player.shots.miss_layup }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.layuppctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.layuppct | int }}%
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.mida100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shots.ast_mid + player.shots.unast_mid }}-{{ player.shots.ast_mid + player.shots.unast_mid + player.shots.miss_mid }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.midpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.midpct | int }}%
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>2pt</th>
+                                    <th>2p%</th>
+                                    <th>3pt</th>
+                                    <th>3p%</th>
+                                    <th>ft</th>
+                                    <th>ft%</th>
+                                    <th>ftr</th>
+                                  </tr>      
+                            </thead>
+                            <tr>
+                                <td style="background-color: hsla(60, {{ player.shooting.fg2a100pctile }}%, 50%);">
+                                    {{ player.shots.fg2m }}-{{ player.shots.fg2a }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.fg2pctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.fg2pct | int }}%
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.fg3a100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shots.fgm - player.shots.fg2m }}-{{ player.shots.fga - player.shots.fg2a }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.fg3pctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.fg3pct | int }}%
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.fta100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shots.ftm }}-{{ player.shots.fta }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.ftpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.ftpct | int }}%
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.shooting.ftrpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.shooting.ftr | round(2) }}
+                                </td>
+                            </tr>
+                        </table>                    
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>astr</th>
+                                    <th>ast%</th>
+                                    <th>tor</th>
+                                    <th>to%</th>
+                                    <th>atr</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="background-color: hsla(60, {{ player.passing.ast100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.passing.ast100 | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.passing.astpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.passing.astpct | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ 100.0 - player.passing.tov100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.passing.tov100 | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ 100.0 - player.passing.tovpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.passing.tovpct | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.passing.atrpctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {% if player.passing.atr %}
+                                            {{ player.passing.atr | round(1) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>                   
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>st%</th>
+                                    <th>bk%</th>
+                                    <th>orr</th>
+                                    <th>or%</th>
+                                    <th>drr</th>
+                                    <th>dr%</th>
+                                </tr>
+                            </thead>
+                            <tr>
+                                <td style="background-color: hsla(60, {{ player.defense.stl100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.defense.stl100 | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.defense.blkpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.defense.blkpct | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.rebounding.orb100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.rebounding.orb100 | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.rebounding.orbpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.rebounding.orbpct | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.rebounding.drb100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.rebounding.drb100 | round(1) }}
+                                </td>
+                                <td style="background-color: hsla(60, {{ player.rebounding.drbpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    {{ player.rebounding.drbpct | round(1) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table >
+                            <thead>
+                                <tr>
+                                    <th>EZ</th>
+                                    <th>EZR</th>
+                                    <th>Scoring</th>
+                                    <th>Passing</th>
+                                    <th>Defense</th>
+                                    <th>Rebounding</th>
+                                </tr>
+                            </thead>
+                                <tr>
+                                    <td style="background-color: hsla(60, {{ player.ez_game_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.game_score | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_poss_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ ((75.0 * player.ez * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.score_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.ez_struct.ez_scoring | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.pass_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.ez_struct.ez_passing | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.reb_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.ez_struct.ez_rebounding | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.def_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.ez_struct.ez_defense | round(1) }}
+                                    </td>
+                                </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}    
+    </div>
+</body>
+</html>

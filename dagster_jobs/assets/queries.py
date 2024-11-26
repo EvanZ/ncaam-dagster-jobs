@@ -35,25 +35,29 @@ def conferences_metadata(path: str) -> str:
     );
     """
 
-def create_table_stage_conferences() -> str:
+def create_table_stage_conferences(women: bool=False) -> str:
     """
     create the conferences table
     """
-    return """
-    create table if not exists stage_conferences (
-        id INTEGER PRIMARY KEY,
-        name STRING,
-        shortName STRING,
-        logo STRING
-    );
+
+    create_query = lambda women: f"""
+        create table if not exists {'stage_women_conferences' if women else 'stage_conferences'} (
+            id INTEGER PRIMARY KEY,
+            name STRING,
+            shortName STRING,
+            logo STRING
+        );
     """
 
-def create_table_stage_players() -> str:
+    query = create_query(women)
+    return query
+
+def create_table_stage_players(women:bool) -> str:
     """
     create players staging table
     """
-    return """
-    create table if not exists stage_players (
+    return f"""
+    create table if not exists {'stage_women_players' if women else 'stage_players'} (
         id INT PRIMARY KEY,
         team_id INT,
         guid UUID,
@@ -84,12 +88,12 @@ def create_table_stage_players() -> str:
     );
     """
 
-def create_table_stage_teams() -> str:
+def create_table_stage_teams(women: bool = False) -> str:
     """
     create the teams table
     """
-    return """
-    create table if not exists stage_teams (
+    generate_query = lambda women: f"""
+    create table if not exists {'stage_women_teams' if women else 'stage_teams'} (
         season INT,
         conferenceName STRING,
         shortConferenceName STRING,
@@ -110,13 +114,16 @@ def create_table_stage_teams() -> str:
         links STRUCT("language" VARCHAR, rel VARCHAR[], href VARCHAR, "text" VARCHAR, shortText VARCHAR, isExternal BOOLEAN, isPremium BOOLEAN, isHidden BOOLEAN)[]
     )
     """
+    query = generate_query(women)
+    return query
 
-def insert_table_stage_conferences(path: str) -> str:
+def insert_table_stage_conferences(path: str, women:bool=False) -> str:
     """
     insert conference data into staging table
     """
-    return f"""
-    insert or ignore into stage_conferences
+
+    insert_query = lambda women: f"""
+    insert or ignore into {'stage_women_conferences' if women else 'stage_conferences'}
     select
         groupId as id,
         name,
@@ -129,12 +136,15 @@ def insert_table_stage_conferences(path: str) -> str:
     returning id, shortName;
     """
 
-def insert_table_stage_players(path: list[str]) -> str:
+    query = insert_query(women)
+    return query
+
+def insert_table_stage_players(path: list[str], women: bool=False) -> str:
     """
     insert players into staging table
     """
     return f"""
-    insert or ignore into stage_players
+    insert or ignore into {'stage_women_players' if women else 'stage_players'}
     select
         id::INT as id,
         team_id::INT as team_id,
@@ -173,12 +183,12 @@ def insert_table_stage_players(path: list[str]) -> str:
     returning id, team_id, display_name, display_height, display_weight, position_display_name;    
     """
 
-def insert_table_stage_teams(path: str) -> str:
+def insert_table_stage_teams(path: str, women: bool=False) -> str:
     """
     insert teams data into staging table
     """
-    return f"""
-    insert or ignore into stage_teams
+    generate_query = lambda women: f"""
+    insert or ignore into {'stage_women_teams' if women else 'stage_teams'}
     select
         season,
         name as conferenceName,
@@ -198,6 +208,8 @@ def insert_table_stage_teams(path: str) -> str:
     )
     returning season, id, displayName, conferenceName;
     """
+    query = generate_query(women)
+    return query
 
 def scoreboard_metadata(path: str) -> str:
     """
@@ -221,12 +233,12 @@ def scoreboard_metadata(path: str) -> str:
     );
     """
 
-def create_table_stage_daily_scoreboard() -> str: 
+def create_table_stage_daily_scoreboard(women:bool=False) -> str: 
     """
     create staging table for daily scoreboard
     """
-    return """
-    create table if not exists stage_daily_scoreboard (
+    return f"""
+    create table if not exists {'stage_daily_scoreboard_women' if women else 'stage_daily_scoreboard'} (
         game_id INTEGER PRIMARY KEY,
         date DATE,
         season INTEGER,
@@ -242,12 +254,12 @@ def create_table_stage_daily_scoreboard() -> str:
     );
     """
 
-def insert_table_stage_daily_scoreboard(path:str, date: str) -> str:
+def insert_table_stage_daily_scoreboard(path:str, date: str, women: bool=False) -> str:
     """
     transform scoreboard data from files and load into staging table
     """
     return f"""
-    insert or ignore into stage_daily_scoreboard 
+    insert or ignore into {'stage_daily_scoreboard_women' if women else 'stage_daily_scoreboard'} 
         select 
             game_id,
             '{date}'::DATE, 
@@ -302,24 +314,24 @@ def insert_table_stage_daily_scoreboard(path:str, date: str) -> str:
         returning game_id;
     """
 
-def fetch_completed_game_ids(date:str) -> str:
+def fetch_completed_game_ids(date:str, women: bool=False) -> str:
     """
     return game_ids from staging table
     """
     return f"""
         select 
             game_id
-        from stage_daily_scoreboard
+        from {'stage_daily_scoreboard_women' if women else 'stage_daily_scoreboard'}
         where (date = '{date}') 
             and (completed is true);
     """
 
-def create_table_stage_game_logs() -> str: 
+def create_table_stage_game_logs(women: bool=False) -> str: 
     """
     create staging table for game logs
     """
-    return """
-    create table if not exists stage_game_logs (
+    return f"""
+    create table if not exists {'stage_game_logs_women' if women else 'stage_game_logs'} (
         game_id INTEGER PRIMARY KEY,
         date DATE,
         season INTEGER,
@@ -368,12 +380,12 @@ def create_table_stage_game_logs() -> str:
     );
     """
 
-def insert_table_stage_game_logs(files:list[str]) -> str:
+def insert_table_stage_game_logs(files:list[str], women: bool=False) -> str:
     """
     insert box score totals into staging table
     """
     return f"""
-    insert or ignore into stage_game_logs
+    insert or ignore into {'stage_game_logs_women' if women else 'stage_game_logs'}
         with s as (
         select
             header.id::INTEGER as game_id,
@@ -440,17 +452,17 @@ def insert_table_stage_game_logs(files:list[str]) -> str:
             team_2_stats,
             team_1_stats.ftm + 3*team_1_stats.fg3m + 2*(team_1_stats.fgm-team_1_stats.fg3m) as team_1_pts,
             team_2_stats.ftm + 3*team_2_stats.fg3m + 2*(team_2_stats.fgm-team_2_stats.fg3m) as team_2_pts
-        from s join stage_daily_scoreboard sds on s.game_id=sds.game_id
+        from s join {'stage_daily_scoreboard_women' if women else 'stage_daily_scoreboard'} sds on s.game_id=sds.game_id
         returning game_id;
     """
 
-def create_table_stage_player_lines() -> str:
+def create_table_stage_player_lines(women: bool=False) -> str:
     """
     staging table for player lines (eg box score totals)
     """
 
     return f"""
-        create table if not exists stage_player_lines (
+        create table if not exists {'stage_player_lines_women' if women else 'stage_player_lines'} (
             game_id INT,
             date DATE,
             player_id INT,
@@ -468,13 +480,13 @@ def create_table_stage_player_lines() -> str:
         )
     """
 
-def insert_table_stage_player_lines(files:list[str], date:str) -> str:
+def insert_table_stage_player_lines(files: list[str], date: str, women: bool=False) -> str:
     """
     insert data into staging table for player lines
     """
     
     return f"""
-    insert or ignore into stage_player_lines
+    insert or ignore into {'stage_player_lines_women' if women else 'stage_player_lines'}
         select 
             game_id,
             '{date}'::DATE,
@@ -537,12 +549,12 @@ def insert_table_stage_player_lines(files:list[str], date:str) -> str:
         returning player_id;
     """
 
-def create_table_stage_plays() -> str:
+def create_table_stage_plays(women: bool=False) -> str:
     """"
     create table for staging play-by-play
     """
-    return """
-    create table if not exists stage_plays (
+    return f"""
+    create table if not exists {'stage_plays_women' if women else 'stage_plays'} (
         play_id BIGINT,
         sequence_id INT,
         game_id INT,
@@ -572,12 +584,12 @@ def create_table_stage_plays() -> str:
     );
     """
 
-def insert_table_stage_plays(files:list[str], date:str) -> str:
+def insert_table_stage_plays(files:list[str], date:str, women: bool=False) -> str:
     """
     insert plays into staging table
     """
     return f"""
-    insert or ignore into stage_plays
+    insert or ignore into {'stage_plays_women' if women else 'stage_plays'}
         select 
             id::BIGINT as play_id,
             sequenceNumber::INT as sequence_id,
@@ -622,12 +634,12 @@ def insert_table_stage_plays(files:list[str], date:str) -> str:
         returning play_id;
     """
 
-def create_table_stage_player_shots_by_game() -> str:
+def create_table_stage_player_shots_by_game(women: bool=False) -> str:
     """
     for tracking shot types (dunks, layups, etc)
     """
-    return """
-    create table if not exists stage_player_shots_by_game (
+    return f"""
+    create table if not exists {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'} (
         game_id INT,
         date DATE,
         team_id INT,
@@ -653,12 +665,12 @@ def create_table_stage_player_shots_by_game() -> str:
     );
     """
 
-def insert_table_stage_player_shots_by_game(date: str) -> str:
+def insert_table_stage_player_shots_by_game(date: str, women: bool=False) -> str:
     """
     count dunks, layups, mid-range and 3pt shots by player by game
     """
     return f"""
-    insert or ignore into stage_player_shots_by_game
+    insert or ignore into {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'}
     select 
         game_id,
         date,
@@ -681,19 +693,19 @@ def insert_table_stage_player_shots_by_game(date: str) -> str:
         count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_3pt,
         count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is null then 1 end) as unast_3pt,
         count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='missed' then 1 end) as miss_3pt
-    from stage_plays
+    from {'stage_plays_women' if women else 'stage_plays'}
     where type_id in (437, 558, 572, 574) and
     date='{date}' and player_1_id is not null
     group by ALL
     returning game_id, team_id, opp_id, home, player_id;
     """
 
-def create_table_stage_player_assists_by_game() -> str:
+def create_table_stage_player_assists_by_game(women: bool=False) -> str:
     """
     create table for staging player assist types
     """
-    return """
-    create table if not exists stage_player_assists_by_game (
+    return f"""
+    create table if not exists {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'} (
         game_id INT,
         team_id INT,
         opp_id INT,
@@ -707,12 +719,12 @@ def create_table_stage_player_assists_by_game() -> str:
     );
     """
 
-def stage_player_assists_by_game(date: str) -> str:
+def stage_player_assists_by_game(date: str, women: bool=False) -> str:
     """
     count different types of assists
     """
     return f"""
-    insert or ignore into stage_player_assists_by_game
+    insert or ignore into {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'}
     select 
         game_id,
         team_id,
@@ -723,7 +735,7 @@ def stage_player_assists_by_game(date: str) -> str:
         count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_to_layup,
         count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_mid,
         count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_3pt
-    from stage_plays
+    from {'stage_plays_women' if women else 'stage_plays'}
     where type_id in (558, 572, 574) and
     date='{date}'
     and player_2_id is not null
@@ -978,7 +990,7 @@ def insert_table_stage_top_lines(date: str) -> str:
             ) as ez_components
         from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
         and l.player_id=s.player_id 
-        join stage_player_assists_by_game a on l.game_id=a.game_id
+        left join stage_player_assists_by_game a on l.game_id=a.game_id
         and l.player_id=a.player_id
         join team_adj ta on l.team_id=ta.team_id
         join opp_adj oa on l.opp_id=oa.team_id
@@ -1018,6 +1030,7 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         g.game_id,
         games,
         RSCI as recruit_rank,
+        DATE '2025-06-25' - birthday::DATE as age_at_draft,
         case when home then team_2_logo else team_1_logo end as team_logo,
         case when home then team_2_location else team_1_location end as team_location,
         case when home then team_1_logo else team_2_logo end as opp_logo,
@@ -1028,7 +1041,11 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         headshot_href,
         display_name,
         jersey,
+        p.city,
+        state,
+        country,
         experience_abbreviation,
+        experience_display_value,
         position_abbreviation,
         position_display_name,
         display_height, 
@@ -1041,39 +1058,137 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         cast(g.minutes*poss/sgl.minutes as INT) as poss,
         struct_pack(
             pts:=stats.ftm + 2*stats.fgm + stats.fg3m,
-            ts:=cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*stats.fga + (0.44*stats.fta),0) as INT),
-            usg:=case when home 
-                then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
-                                    (sgl.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
-                else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * g.minutes /
-                                    (sgl.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+            ts:=cast(100*(stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(2*(stats.fga + 0.44*stats.fta),0) as INT),
+            tspctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.ftm + 2*stats.fgm + stats.fg3m + 0.001)/nullif(2*(stats.fga + 0.44*stats.fta),0) asc)),
+            orbpct:=case when home 
+                then cast(100.0 * stats.orb * sgl.minutes /
+                                    (g.minutes * (team_2_stats.drb + team_1_stats.orb)) as INT)
+                else cast(100.0 * stats.orb * sgl.minutes /
+                                    (g.minutes * (team_1_stats.drb + team_2_stats.orb)) as INT)
                 end,
-            ppp:=round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2)
+            orbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                case when home 
+                then cast(100.0 * (stats.orb+0.001) * sgl.minutes /
+                                    (g.minutes * (team_2_stats.drb + team_1_stats.orb)) as INT)
+                else cast(100.0 * (stats.orb+0.001) * sgl.minutes /
+                                    (g.minutes * (team_1_stats.drb + team_2_stats.orb)) as INT)
+                end asc)),
+            drbpct:=case when home 
+                then cast(100.0 * stats.drb * sgl.minutes /
+                                    (g.minutes * (team_2_stats.orb + team_1_stats.drb)) as INT)
+                else cast(100.0 * stats.drb * sgl.minutes /
+                                    (g.minutes * (team_1_stats.orb + team_2_stats.drb)) as INT)
+                end,
+            drbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                case when home 
+                then cast(100.0 * (stats.drb+0.001) * sgl.minutes /
+                                    (g.minutes * (team_2_stats.orb + team_1_stats.drb)) as INT)
+                else cast(100.0 * (stats.drb+0.001) * sgl.minutes /
+                                    (g.minutes * (team_1_stats.orb + team_2_stats.drb)) as INT)
+                end asc)),
+            usg:=case when home 
+                then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * sgl.minutes /
+                                    (g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+                else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * sgl.minutes /
+                                    (g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+                end,
+            usgpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                case when home 
+                then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov + 0.001) * sgl.minutes /
+                                    (g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+                else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov + 0.001) * sgl.minutes /
+                                    (g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+                end asc)),
+            ppp:=round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2),
+            ppppctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.ftm + 2*stats.fgm + stats.fg3m + 0.001)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0) asc)),
+            astpct:=case when home 
+                then cast(100.0 * stats.ast * sgl.minutes /
+                                    (g.minutes * (team_2_stats.fgm - stats.fgm)) as INT)
+                else cast(100.0 * stats.ast * sgl.minutes /
+                                    (g.minutes * (team_1_stats.fgm - stats.fgm)) as INT)
+                end,
+            astpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                case when home 
+                then cast(100.0 * (stats.ast+0.001) * sgl.minutes /
+                                    (g.minutes * (team_2_stats.fgm - stats.fgm)) as INT)
+                else cast(100.0 * (stats.ast+0.001) * sgl.minutes /
+                                    (g.minutes * (team_1_stats.fgm - stats.fgm)) as INT)
+                end asc)),
+            tovpct:=cast(100.0 * stats.tov/(stats.fga + 0.44*stats.fta + stats.tov) as INT),
+            tovpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.tov+0.001)/(stats.fga + 0.44*stats.fta + stats.tov)) desc)),
+            ftr:=round(stats.fta/stats.fga, 2),
+            ftrpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.fta + 0.001)/stats.fga) asc))
         ) as usg_struct,
         struct_pack(
-            twos:= concat(stats.fgm-stats.fg3m, '-', stats.fga-stats.fg3a, '(', shots.unast_dunk+shots.unast_layup+shots.unast_mid, ')'), 
-            dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, '(', shots.unast_dunk, ')'), 
-            layups:= concat(shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, '(', shots.unast_layup, ')'),
-            midrange:= concat(shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, '(', shots.unast_mid, ')'), 
-            threes:= concat(stats.fg3m, '-', stats.fg3a, '(', shots.unast_3pt, ')'),
+            twos:= concat(stats.fg2m, '-', stats.fg2a,'&nbsp;',shots.unast_dunk+shots.unast_layup+shots.unast_mid, 'u'), 
+            twospctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.fg2a + 0.001)/stats.fga) asc)),
+            dunks:= concat(shots.ast_dunk+shots.unast_dunk, '-',shots.ast_dunk+shots.unast_dunk+shots.miss_dunk, '&nbsp;', shots.unast_dunk, 'u'), 
+            dunkspctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((shots.ast_dunk+shots.unast_dunk+shots.miss_dunk + 0.001)/stats.fga) asc)),
+            layups:= concat(shots.ast_layup+shots.unast_layup, '-',shots.ast_layup+shots.unast_layup+shots.miss_layup, '&nbsp;',shots.unast_layup, 'u'),
+            layupspctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((shots.ast_layup+shots.unast_layup+shots.miss_layup + 0.001)/stats.fga) asc)),
+            midrange:= concat(shots.ast_mid+shots.unast_mid, '-', shots.ast_mid+shots.unast_mid+shots.miss_mid, '&nbsp;',shots.unast_mid, 'u'), 
+            midrangepctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((shots.ast_mid+shots.unast_mid+shots.miss_mid + 0.001)/stats.fga) asc)),
+            threes:= concat(stats.fg3m, '-', stats.fg3a, '&nbsp;',shots.unast_3pt, 'u'),
+            threespctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.fg3a + 0.001)/stats.fga) asc)),
             fts:= concat(stats.ftm, '-', stats.fta)
         ) as shots_struct,
         stats,
         struct_pack(
-            ez:=case
-                   when ez > mu + 2.0 * sigma then round(cast(ez as double),1) 
-                   when ez > mu + 1.0 * sigma then round(cast(ez as double),1)
-                   when ez < mu - 1.0 * sigma then round(cast(ez as double),1)
-                   when ez < mu - 2.0 * sigma then round(cast(ez as double),1) 
-                   else round(cast(ez as double),1)
-                end,
+            pts:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.ftm + 2*stats.fgm + stats.fg3m)*sgl.minutes/(g.minutes*poss)) asc)),
+            ast:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.ast*sgl.minutes/(g.minutes*poss)) asc)),
+            tov:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.tov*sgl.minutes/(g.minutes*poss)) desc)),
+            orb:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.orb*sgl.minutes/(g.minutes*poss)) asc)),
+            drb:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.drb*sgl.minutes/(g.minutes*poss)) asc)),
+            reb:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((stats.orb+stats.drb)*sgl.minutes/(g.minutes*poss)) asc)),
+            stl:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.stl*sgl.minutes/(g.minutes*poss)) asc)),
+            blk:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (stats.blk*sgl.minutes/(g.minutes*poss)) asc))
+        ) as percentiles,
+        struct_pack(
+            ez:=round(cast(ez as double),1),
+            ezpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ez asc)),
             ez75:=round(75*ez*sgl.minutes/(g.minutes*poss), 1),
+            ez75pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (ez*sgl.minutes/(g.minutes*poss)) asc)),
             avg:=round(cast(mu as double), 1),
+            avgpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                mu asc)),
             std:=round(cast(sigma as double), 1),
+            stdpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                sigma asc)),
             max:=round(cast(inf as double), 1),
-            med:=round(cast(med as double), 1)
+            maxpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                inf asc)),
+            med:=round(cast(med as double), 1),
+            medpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                med asc))
         ) as ez_struct,
         ez_components,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            ez_components.scoring asc)) as scoringpctile,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            ez_components.rebounding asc)) as reboundingpctile,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            ez_components.passing asc)) as passingpctile,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            ez_components.stocks asc)) as stockspctile,
         assists,
         game_rank,
         case
@@ -1087,6 +1202,270 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
     join stage_game_logs sgl on g.game_id=sgl.game_id
     left join stage_players p on g.player_id=p.id
     left join stage_rsci_rankings rsci on p.full_name=rsci.Player
+    left join stage_prospect_birthdays b on p.full_name=b.name
     join stage_teams t1 on g.team_id=t1.id
-    join stage_teams t2 on g.opp_id=t2.id;
+    join stage_teams t2 on g.opp_id=t2.id
+    order by class_rank asc;
+    """
+
+def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int], top_n: int) -> str:
+    """
+    build the top lines html report query
+    """
+    return f"""
+    with stats as (
+        select
+            player_id,
+            sum(case when starter then 1 else 0 end) as gs,
+            sum(case when tl.minutes>0 then 1 else 0 end) as gp,
+            sum(tl.minutes) as minutes,
+            sum(g.poss) as team_poss,
+            sum(g.minutes) as team_minutes,
+            sum(case when home then team_2_stats.orb else team_1_stats.orb end) as team_orb,
+            sum(case when home then team_2_stats.drb else team_1_stats.drb end) as team_drb,
+            sum(case when home then team_1_stats.orb else team_2_stats.orb end) as opp_orb,
+            sum(case when home then team_1_stats.drb else team_2_stats.drb end) as opp_drb,
+            sum(case when home then team_2_stats.tov else team_1_stats.tov end) as team_tov,
+            sum(case when home then team_2_stats.fga else team_1_stats.fga end) as team_fga,
+            sum(case when home then team_2_stats.fgm else team_1_stats.fgm end) as team_fgm,
+            sum(case when home then team_2_stats.fta else team_1_stats.fta end) as team_fta,
+            sum(case when home then team_1_stats.fga else team_2_stats.fga end) as opp_fga,
+            sum(case when home then team_1_stats.fg3a else team_2_stats.fg3a end) as opp_fg3a,
+            sum(stats.stl) as stl,
+            sum(stats.blk) as blk,
+            sum(stats.fgm) as fgm,
+            sum(stats.fga) as fga,
+            sum(stats.fg3m) as fg3m,
+            sum(stats.fg3a) as fg3a,
+            sum(stats.fg2a) as fg2a,
+            sum(stats.fg2m) as fg2m,
+            sum(stats.tov) as tov,
+            sum(stats.ast) ast,
+            sum(stats.fta) as fta,
+            sum(stats.ftm) as ftm,
+            sum(stats.drb) as drb,
+            sum(stats.orb) as orb,
+            sum(shots.ast_tip) as ast_tip,
+            sum(shots.unast_tip) as unast_tip,
+            sum(shots.miss_tip) as miss_tip,
+            sum(shots.ast_dunk) as ast_dunk,
+            sum(shots.unast_dunk) as unast_dunk,
+            sum(shots.miss_dunk) as miss_dunk,
+            sum(shots.ast_layup) as ast_layup,
+            sum(shots.unast_layup) as unast_layup,
+            sum(shots.miss_layup) as miss_layup,
+            sum(shots.ast_mid) as ast_mid,
+            sum(shots.unast_mid) as unast_mid,
+            sum(shots.miss_mid) as miss_mid,
+            sum(shots.ast_3pt) as ast_3pt,
+            sum(shots.unast_3pt) as unast_3pt,
+            sum(shots.miss_3pt) as miss_3pt,
+            sum(assists.dunks) as ast_to_dunk,
+            sum(assists.layups) as ast_to_layup,
+            sum(assists.midrange) as ast_to_mid,
+            sum(assists.threes) as ast_to_3pt,
+            sum(ez) as ez,
+            sum(ez_components.rebounding) as ez_rebounding,
+            sum(ez_components.scoring) as ez_scoring,
+            sum(ez_components.passing) as ez_passing,
+            sum(ez_components.stocks) as ez_defense
+        from stage_top_lines tl join stage_game_logs g on tl.game_id=g.game_id
+        where years in ({', '.join(map(str, exp))})
+        and tl.date between '{start_date}' and '{end_date}'
+        group by player_id
+        order by ez desc
+        limit {top_n}
+    )
+    select
+        s.player_id,
+        RSCI as recruit_rank,
+        DATE '2025-06-25' - birthday::DATE as age_at_draft,
+        display_name,
+        location as team_location,
+        color,
+        alternateColor as alternate_color,
+        team_id,
+        shortConferenceName as team_conf,
+        experience_abbreviation,
+        experience_display_value,
+        position_abbreviation,
+        position_display_name,
+        headshot_href,
+        display_height,
+        display_weight,
+        jersey,
+        p.city,
+        state,
+        country,
+        ez,
+        gs,
+        gp,
+        ez/gp as game_score,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by 
+            (ez* team_minutes / (minutes * team_poss)) asc)) as ez_poss_pctile,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by 
+            (ez/gp) asc)) as ez_game_pctile,
+        minutes,
+        team_minutes,
+        team_poss,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by minutes/gp asc)) as mpgpctile,
+        struct_pack(
+            ez_rebounding,
+            reb_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by (ez_rebounding* team_minutes / (minutes * team_poss)) asc)),
+            ez_scoring,
+            score_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by (ez_scoring* team_minutes / (minutes * team_poss)) asc)),
+            ez_passing,
+            pass_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by (ez_passing* team_minutes / (minutes * team_poss)) asc)),
+            ez_defense,
+            def_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by (ez_defense* team_minutes / (minutes * team_poss)) asc))
+        ) as ez_struct,
+        struct_pack(
+            ast_tip,
+            ast_mid,
+            ast_layup,
+            ast_dunk,
+            ast_3pt,
+            unast_tip,
+            unast_mid,
+            unast_layup,
+            unast_dunk,
+            unast_3pt,
+            miss_tip,
+            miss_mid,
+            miss_layup,
+            miss_dunk,
+            miss_3pt,
+            fta,
+            ftm,
+            fga,
+            fgm,
+            fg2a,
+            fg2m
+        ) as shots,
+        ast,
+        tov,
+        tov/gp as tpg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            tov/gp desc)) as tpgpctile,
+        stl,
+        stl/gp as spg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            stl/gp asc)) as spgpctile,
+        blk,
+        blk/gp as bpg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            blk/gp asc)) as bpgpctile,
+        orb,
+        drb,
+        (orb+drb)/gp as rpg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            (orb+drb)/gp asc)) as rpgpctile,
+        ast/gp as apg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            ast/gp asc)) as apgpctile,
+        (2*fg2m + 3*(fgm-fg2m) + ftm)/gp as ppg,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            (2*fg2m + 3*(fgm-fg2m) + ftm)/gp asc)) as ppgpctile,
+        rank() over (partition by experience_abbreviation order by ez/gp desc) as class_rank,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by ez asc)) as ez_pctile,
+        struct_pack(
+            fg2pct:=100*fg2m/nullif(fg2a,0),
+            fg2pctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fg2m/nullif(fg2a,0) asc)),
+            fg3pct:=100*fg3m/nullif(fg3a,0),
+            fg3pctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fg3m/nullif(fg3a,0) asc)),
+            ftpct:=100*ftm/nullif(fta,0),
+            ftpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ftm/nullif(fta,0) asc)),
+            dunkpct:=100*(unast_dunk+ast_dunk)/nullif(unast_dunk+ast_dunk+miss_dunk,0),
+            dunkpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_dunk+ast_dunk)/nullif(unast_dunk+ast_dunk+miss_dunk,0) asc)),
+            dunka100:=cast(100.0 * (unast_dunk+ast_dunk+miss_dunk) * team_minutes / (minutes * team_poss) as numeric),
+            dunka100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_dunk+ast_dunk+miss_dunk) * team_minutes / (minutes * team_poss) asc)),
+            layuppct:=100*(unast_layup+ast_layup)/nullif(unast_layup+ast_layup+miss_layup,0),
+            layuppctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_layup+ast_layup)/nullif(unast_layup+ast_layup+miss_layup,0) asc)),
+            layupa100:=cast(100.0 * (unast_layup+ast_layup+miss_layup) * team_minutes / (minutes * team_poss) as numeric),
+            layupa100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_layup+ast_layup+miss_layup) * team_minutes / (minutes * team_poss) asc)),
+            midpct:=100*(unast_mid+ast_mid)/nullif(unast_mid+ast_mid+miss_mid,0),
+            midpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_mid+ast_mid)/nullif(unast_mid+ast_mid+miss_mid,0) asc)),
+            mida100:=cast(100.0 * (unast_mid+ast_mid+miss_mid) * team_minutes / (minutes * team_poss) as numeric),
+            mida100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_mid+ast_mid+miss_mid) * team_minutes / (minutes * team_poss) asc)),
+            tippct:=100*(unast_tip+ast_tip)/nullif(unast_tip+ast_tip+miss_tip,0),
+            tippctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (unast_tip+ast_tip)/nullif(unast_tip+ast_tip+miss_tip,0) asc)),
+            usg:=100.0 * (fga + 0.44 * fta + tov) * team_minutes / (minutes * team_poss),
+            usgpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (fga + 0.44 * fta + tov) * team_minutes / (minutes * team_poss) asc)),
+            ts:=cast(100*(ftm + 2*fgm + fg3m)/nullif(2*(fga + 0.44*fta),0) as INT),
+            tspctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (ftm + 2*fgm + fg3m)/nullif(2*(fga + 0.44*fta),0) asc)),
+            ppp:=(ftm + 2*fgm + fg3m)/nullif(fga + 0.44 * fta + tov,0),
+            ppppctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                (ftm + 2*fgm + fg3m)/nullif(fga + 0.44 * fta + tov,0) asc)),
+            ftr:=fta/nullif(fga, 0),
+            ftrpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fta/nullif(fga, 0) asc)),
+            fta100:=cast(100.0 * fta * team_minutes / (minutes * team_poss) as numeric),
+            fta100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fta * team_minutes / (minutes * team_poss) asc)),
+            fg2a100:=cast(100.0 * fg2a * team_minutes / (minutes * team_poss) as numeric),
+            fg2a100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fg2a * team_minutes / (minutes * team_poss) asc)),
+            fg3a100:=cast(100.0 * fg3a * team_minutes / (minutes * team_poss) as numeric),
+            fg3a100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                fg3a * team_minutes / (minutes * team_poss) asc))
+        ) as shooting,
+        struct_pack(
+            ast100:=round(cast(100.0 * ast * team_minutes / (minutes * team_poss) as numeric),1),
+            ast100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast * team_minutes / (minutes * team_poss) asc)),
+            tov100:=round(cast(100.0 * tov * team_minutes / (minutes * team_poss) as numeric),1),
+            tov100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                tov * team_minutes / (minutes * team_poss) desc)),
+            astpct:=round(cast(100.0 * ast * team_minutes / (minutes*(team_fgm-fgm)) as numeric),1),
+            astpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast * team_minutes / (minutes*(team_fgm-fgm)) asc)),
+            tovpct:=round(cast(100.0 * tov / (fga + (0.44 * fta) + tov) as numeric),1),
+            tovpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                tov / (fga + (0.44 * fta) + tov) desc)),
+            atr:=ast/nullif(tov, 0),
+            atrpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast/nullif(tov, 0) asc))
+        ) as passing,
+        struct_pack(
+            orb100:=round(cast(100.0 * orb * team_minutes / (minutes * team_poss) as numeric),1),
+            drb100:=round(cast(100.0 * drb * team_minutes / (minutes * team_poss) as numeric),1),
+            orbpct:=round(cast(100.0 * orb * team_minutes / (minutes * (team_orb+opp_drb)) as numeric),1),
+            drbpct:=round(cast(100.0 * drb * team_minutes / (minutes * (team_drb+opp_orb)) as numeric),1),
+            orb100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                orb * team_minutes / (minutes * team_poss))),
+            drb100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                drb * team_minutes / (minutes * team_poss))),
+            orbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                orb * team_minutes / (minutes * (team_orb+opp_drb)))),
+            drbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                drb * team_minutes / (minutes * (team_drb+opp_orb))))
+        ) as rebounding,
+        struct_pack(
+            stl100:=round(cast(100.0 * stl * team_minutes / (minutes * team_poss) as numeric),1),
+            stl100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                stl * team_minutes / (minutes * team_poss))),
+            blk100:=round(cast(100.0 * blk * team_minutes / (minutes * team_poss) as numeric),1),
+            blk100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                blk * team_minutes / (minutes * team_poss))),
+            blkpct:=round(cast(100.0 * blk * team_minutes / (minutes*(opp_fga-opp_fg3a)) as numeric),1),
+            blkpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                blk * team_minutes / (minutes*(opp_fga-opp_fg3a))))
+        ) as defense
+    from stats s join stage_players p on s.player_id=p.id
+    left join stage_rsci_rankings rsci on p.full_name=rsci.Player
+    left join stage_prospect_birthdays b on p.full_name=b.name
+    join stage_teams t on p.team_id=t.id
+    order by class_rank asc;
     """

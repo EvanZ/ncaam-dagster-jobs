@@ -1,14 +1,14 @@
 from dagster import Definitions, load_assets_from_modules, with_source_code_references
 
-from .assets import espn, models
+from .assets import espn, women, models
 from .resources import database_resource, download_base_path, jinja_templates_path
-from .jobs import daily_update_job, cleanup_job, models_update_job, top_lines_job
+from .jobs import daily_update_job, daily_update_job_women, cleanup_job, models_update_job, top_lines_job, season_report_job
 from .schedules import daily_update_schedule
 
-espn_assets = load_assets_from_modules([espn])
+espn_assets = load_assets_from_modules([espn, women])
 model_assets = load_assets_from_modules([models])
 
-all_jobs = [daily_update_job, models_update_job, top_lines_job, cleanup_job]
+all_jobs = [daily_update_job, daily_update_job_women, models_update_job, top_lines_job, cleanup_job, season_report_job]
 all_schedules = [daily_update_schedule]
 
 defs = Definitions(

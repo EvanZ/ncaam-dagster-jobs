@@ -12,6 +12,7 @@ from dagster import (
     asset, 
     op, 
     Field,
+    Bool,
     String,
     Int,
     AssetExecutionContext, 
@@ -34,15 +35,20 @@ from . import queries
 from .constants import (
     DATE_FORMAT, 
     ROSTER_URL, 
+    ROSTER_URL_WOMEN,
     SCOREBOARD_URL_TEMPLATE, 
+    SCOREBOARD_URL_TEMPLATE_WOMEN,
     GAME_SUMMARY_URL_TEMPLATE, 
     TEAMS_URL, 
+    TEAMS_URL_WOMEN,
     CONFERENCES_URL,
+    CONFERENCES_URL_WOMEN,
     PYTHON,
     DUCKDB,
     DAILY,
-    REPORT,
+    RANKINGS,
     SEASONAL,
+    TOP_LINES
     )
 from ..partitions import daily_partition
 from ..resources import LocalFileStorage, JinjaTemplates
@@ -53,16 +59,25 @@ warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
 
 @asset(
     group_name=SEASONAL,
-    compute_kind=PYTHON
+    compute_kind=PYTHON,
+    config_schema={
+        "women": Field(Bool, default_value=False)
+    }
 )
 def teams_file(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
     downloads the teams from the espn api
     """
-    path = os.path.join(storage.filepath, "teams")
-    os.makedirs(path, exist_ok=True)
+    is_womens = context.op_config['women']
+    if not is_womens:
+        path = os.path.join(storage.filepath, "teams")
+        url = TEAMS_URL
+    else:
+        path = os.path.join(storage.filepath,"women", "teams")
+        url = TEAMS_URL_WOMEN
 
-    teams_info = fetch_data(TEAMS_URL, context)
+    os.makedirs(path, exist_ok=True)
+    teams_info = fetch_data(url, context)
     with open(os.path.join(path, "teams.json"), "w") as f:
         json.dump(teams_info, f)
 
@@ -80,18 +95,27 @@ def teams_file(context: AssetExecutionContext, database: DuckDBResource, storage
 
 @asset(
     group_name=SEASONAL,
-    compute_kind=PYTHON
+    compute_kind=PYTHON,
+    config_schema={
+        "women": Field(Bool, default_value=False)
+    }
 )
 def conferences_file(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
     downloads the teams from the espn api
     """
-    path = os.path.join(storage.filepath, "conferences")
-    os.makedirs(path, exist_ok=True)
+    is_womens = context.op_config['women']
+    if not is_womens:
+        path = os.path.join(storage.filepath, "conferences")
+        url = CONFERENCES_URL
+    else:
+        path = os.path.join(storage.filepath,"women", "conferences")
+        url = CONFERENCES_URL_WOMEN
 
-    teams_info = fetch_data(CONFERENCES_URL, context)
+    os.makedirs(path, exist_ok=True)
+    conf_info = fetch_data(url, context)
     with open(os.path.join(path, "conferences.json"), "w") as f:
-        json.dump(teams_info, f)
+        json.dump(conf_info, f)
 
     with database.get_connection() as conn:
         df = conn.execute(queries.conferences_metadata(os.path.join(path, "conferences.json"))).df()
@@ -108,22 +132,43 @@ def conferences_file(context: AssetExecutionContext, database: DuckDBResource, s
 @asset(
     deps=[conferences_file],
     group_name=SEASONAL,
-    compute_kind=DUCKDB 
+    compute_kind=DUCKDB,
+    config_schema={
+        "women": Field(Bool, default_value=False)
+    } 
 )
 def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
     stages the conference data
     """
-    path = os.path.join(storage.filepath, "conferences", "conferences.json")
+    is_women=context.op_config['women']
+
+    if not is_women:
+        path = os.path.join(storage.filepath, "conferences", "conferences.json")
+    else:
+        path = os.path.join(storage.filepath, "women", "conferences", "conferences.json")
+
     context.log.info(f'path: {path}')
 
     if not os.path.exists(path):
         raise Exception("path/to/conferences does not exist...aborting further materialization")
-    
+
+    create_drop_query = lambda women: f"""
+        drop table if exists {'stage_women_conferences' if women else 'stage_conferences'};
+    """
+    drop_confs_query = create_drop_query(is_women)
+    context.log.info(drop_confs_query)
+
+    create_table_query = queries.create_table_stage_conferences(is_women)
+    context.log.info(create_table_query)
+
+    insert_query = queries.insert_table_stage_conferences(path, is_women)
+    context.log.info(insert_query)
+
     with database.get_connection() as conn:
-        conn.execute(queries.create_table_stage_conferences())
-        context.log.info(queries.insert_table_stage_conferences(path))
-        df = conn.execute(queries.insert_table_stage_conferences(path)).df()
+        conn.execute(drop_confs_query)
+        conn.execute(create_table_query)
+        df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -135,23 +180,44 @@ def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, 
 @asset(
     deps=[teams_file],
     group_name=SEASONAL,
-    compute_kind=DUCKDB  
+    compute_kind=DUCKDB,  
+    config_schema={
+        "women": Field(Bool, default_value=False)
+    } 
 )
 def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
     stages the teams data
     """
-    path = os.path.join(storage.filepath, "teams", "teams.json")
+    is_women=context.op_config['women']
+
+    if not is_women:
+        path = os.path.join(storage.filepath, "teams", "teams.json")
+    else:
+        path = os.path.join(storage.filepath, "women", "teams", "teams.json")
+
     context.log.info(f'path: {path}')
 
     if not os.path.exists(path):
         raise Exception("path/to/teams does not exist...aborting further materialization")
-    
+
+    create_drop_query = lambda women: f"""
+        drop table if exists {'stage_women_teams' if women else 'stage_teams'};
+    """
+
+    drop_teams_query = create_drop_query(is_women)
+    context.log.info(drop_teams_query)
+
+    create_table_query = queries.create_table_stage_teams(is_women)
+    context.log.info(create_table_query)
+
+    insert_query = queries.insert_table_stage_teams(path, is_women)
+    context.log.info(insert_query)
+
     with database.get_connection() as conn:
-        conn.execute("drop table if exists stage_teams;")
-        conn.execute(queries.create_table_stage_teams())
-        context.log.info(queries.insert_table_stage_teams(path))
-        df = conn.execute(queries.insert_table_stage_teams(path)).df()
+        conn.execute(drop_teams_query)
+        conn.execute(create_table_query)
+        df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -163,7 +229,11 @@ def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storag
 @asset(
         deps=[stage_teams],
         group_name=SEASONAL,
-        config_schema={"season": int, "ids": [int]},
+        config_schema={
+            "season": int, 
+            "women": Field(Bool, default_value=False),
+            "ids": [int]
+            },
         compute_kind=PYTHON
 )
 def rosters_files(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
@@ -174,18 +244,28 @@ def rosters_files(context: AssetExecutionContext, database: DuckDBResource, stor
     invalid_urls = []
     valid_urls = []
     ids = context.op_config['ids']
+    is_women = context.op_config['women']
+    season = context.op_config['season']
+
     if not ids:
         with database.get_connection() as conn:
-            df = conn.execute("select id from stage_teams;").df()
+            df = conn.execute(f"select id from {'stage_women_teams' if is_women else 'stage_teams'};").df()
         ids = df['id']
 
     for id in ids:
         context.log.info(f'team id: {id}')
-        roster_url = ROSTER_URL(id, context.op_config['season'])
+        if not is_women:
+            roster_url = ROSTER_URL(id, season)
+            path = os.path.join(storage.filepath, "rosters", str(id))
+        else:
+            roster_url = ROSTER_URL_WOMEN(id, season)
+            path = os.path.join(storage.filepath, "women", "rosters", str(id))
+
         context.log.info(roster_url)
+        context.log.info(path)
+        
         try:
             roster = fetch_data(roster_url, context)
-            path = os.path.join(storage.filepath, "rosters", str(id))
             os.makedirs(path, exist_ok=True)
             with open(os.path.join(path, "roster.json"), "w") as f:
                 context.log.info(f"""
@@ -207,20 +287,35 @@ def rosters_files(context: AssetExecutionContext, database: DuckDBResource, stor
 @asset(
         group_name=SEASONAL,
         compute_kind=DUCKDB,
-        deps=[rosters_files]
+        deps=[rosters_files],
+        config_schema={
+            "women": Field(Bool, default_value=False)
+        }
 )
 def stage_players(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage) -> MaterializeResult:
     """
     stage player info from rosters download
     """
-    with database.get_connection() as conn:
-        conn.execute("drop table if exists stage_players;")
-        conn.execute(queries.create_table_stage_players())
+    is_women = context.op_config['women']
 
-    all_rosters_paths = glob(os.path.join(storage.filepath, "rosters", "*", "roster.json"))
+    if not is_women:
+        all_rosters_paths = glob(os.path.join(storage.filepath, "rosters", "*", "roster.json"))
+    else:
+        all_rosters_paths = glob(os.path.join(storage.filepath, "women", "rosters", "*", "roster.json"))
+
+    drop_query = f"drop table if exists {'stage_women_players' if is_women else 'stage_players'};"
+    context.log.info(drop_query)
+
+    create_query = queries.create_table_stage_players(is_women)
+    context.log.info(create_query)
+
+    insert_query = queries.insert_table_stage_players(all_rosters_paths, is_women)
+    context.log.info(insert_query)
+
     with database.get_connection() as conn:
-        context.log.info(queries.insert_table_stage_players(all_rosters_paths))
-        df = conn.execute(queries.insert_table_stage_players(all_rosters_paths)).df()
+        conn.execute(drop_query)
+        conn.execute(create_query)
+        df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -252,6 +347,36 @@ def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource
                      """)
         schema = conn.execute("describe from stage_rsci_rankings limit 1;").df()
         df = conn.execute("from stage_rsci_rankings;").df()
+        context.log.info(schema)
+    
+    return MaterializeResult(
+        metadata={
+            "schema": MetadataValue.md(schema.to_markdown()),
+            "count": MetadataValue.int(len(df)),
+            "sample": MetadataValue.md(df.sample(n=50).to_markdown())
+        }
+    )
+
+@asset(
+    group_name=SEASONAL,
+    compute_kind=DUCKDB,
+)
+def stage_prospect_birthdays(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    stage prospect birthdays from csv files
+    """
+    path = os.path.join(os.environ['BIRTHDAY_PATH'], "*.csv")
+    context.log.info(path)
+
+    with database.get_connection() as conn:
+        conn.execute("drop table if exists stage_prospect_birthdays;")
+        conn.execute(f"""
+                     create table stage_prospect_birthdays as (
+                     from read_csv('{path}', header=true, filename=true)
+                     );
+                     """)
+        schema = conn.execute("describe from stage_prospect_birthdays limit 1;").df()
+        df = conn.execute("from stage_prospect_birthdays;").df()
         context.log.info(schema)
     
     return MaterializeResult(
@@ -584,7 +709,7 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
             "end_date": Field(String, is_required=True),
             "top_n": Field(Int, default_value=50, is_required=False)
         },
-        group_name=REPORT,
+        group_name=TOP_LINES,
         compute_kind=PYTHON
     )
     def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
@@ -605,13 +730,16 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-        player_card_template = env.get_template("player_cards_template_all_classes.html")
+        player_card_template = env.get_template("player_cards_template_all_loop_tables.html")
 
         # Convert DataFrame to a list of dictionaries
         players = df.to_dict(orient="records")
 
         # Render the template with player data
-        html_content = player_card_template.render(players=players)
+        html_content = player_card_template.render(players=players, dates={
+            'start': datetime.strptime(start_date, "%Y-%m-%d").strftime('%b. %d'),
+            'end': datetime.strptime(end_date, "%Y-%m-%d").strftime('%b. %d')
+        })
         path = os.path.join(storage.filepath, "top_lines", end_date)
         os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, f"{name}.html"), "w") as f:
@@ -625,7 +753,59 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
     
     return _asset
 
-freshmen_tl = build_top_lines_html_table(exp=[0,1], name="freshmen")
-sophomores_tl = build_top_lines_html_table(exp=[2], name="sophomores")
-upperclassmen_tl = build_top_lines_html_table(exp=[3,4,5], name="upperclassmen")
+# freshmen_tl = build_top_lines_html_table(exp=[0,1], name="freshmen")
+# sophomores_tl = build_top_lines_html_table(exp=[2], name="sophomores")
+# upperclassmen_tl = build_top_lines_html_table(exp=[3,4,5], name="upperclassmen")
 all_tl = build_top_lines_html_table(exp=[0,1,2,3,4,5], name="all")
+
+def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDefinition:
+    @asset(
+        name=f"season_rankings_report_for_{name}",
+        deps=["stage_top_lines", "stage_players", "stage_teams"],
+        config_schema={
+            "start_date": Field(String, is_required=True),
+            "end_date": Field(String, is_required=True),
+            "top_n": Field(Int, default_value=50, is_required=False)
+        },
+        group_name=RANKINGS,
+        compute_kind=PYTHON
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
+        """
+        create html report for newsletter
+        """
+        start_date = context.op_config['start_date']
+        end_date = context.op_config['end_date']
+        top_n = context.op_config['top_n']
+
+        with database.get_connection() as conn:
+            df = conn.execute(query=queries.prospect_rankings_report_query(
+                start_date=start_date,
+                end_date=end_date,
+                exp=exp,
+                top_n=top_n
+            )).df()
+
+        # Set up Jinja2 environment to load templates from the current directory
+        env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
+        template = env.get_template("player_cards_template_season_rankings.html")
+
+        # Convert DataFrame to a list of dictionaries
+        players = df.to_dict(orient="records")
+
+        # Render the template with player data
+        html_content = template.render(players=players)
+        path = os.path.join(storage.filepath, "rankings", end_date)
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, f"{name}.html"), "w") as f:
+            f.write(html_content)
+        
+        return MaterializeResult(
+            metadata={
+                "df": MetadataValue.md(df.to_markdown())
+            }
+        )
+    
+    return _asset
+
+prospect_rankings_report = build_season_rankings_report(exp=[0,1,2,3,4,5], name="all")
