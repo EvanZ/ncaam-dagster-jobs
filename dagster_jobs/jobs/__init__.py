@@ -1,7 +1,11 @@
 import os
 
-from dagster import AssetSelection, define_asset_job, job, config_from_files, EnvVar
-from ..assets.constants import DAILY, DAILY_WOMEN, MODELS, TOP_LINES, RANKINGS
+from dagster import (
+    AssetSelection, define_asset_job, 
+    job, config_from_files)
+from ..assets.constants import (
+    DAILY, DAILY_WOMEN, MODELS, MODELS_WOMEN, TOP_LINES, 
+    TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN)
 from ..partitions import daily_partition
 from ..assets.ops import create_drop_table_op
 
@@ -23,17 +27,35 @@ models_update_job = define_asset_job(
     selection=AssetSelection.groups(MODELS)
     )
 
-run_config = os.environ["CONFIG_PATH"]
+models_update_job_women = define_asset_job(
+    name="models_update_women",
+    selection=AssetSelection.groups(MODELS_WOMEN)
+    )
+
+run_config_top_lines = os.environ["CONFIG_PATH"]
 top_lines_job = define_asset_job(
     name="top_lines_reports",
     selection=AssetSelection.groups(TOP_LINES),
-    config=config_from_files(config_files=[run_config])
+    config=config_from_files(config_files=[run_config_top_lines])
+)
+
+run_config_top_lines_women = os.environ["CONFIG_PATH_WOMEN"]
+top_lines_job_women = define_asset_job(
+    name="top_lines_reports_women",
+    selection=AssetSelection.groups(TOP_LINES_WOMEN),
+    config=config_from_files(config_files=[run_config_top_lines_women])
 )
 
 season_report_job = define_asset_job(
     name="season_reports",
     selection=AssetSelection.groups(RANKINGS),
-    config=config_from_files(config_files=['/Users/evanzamir/projects/ncaam-data-pipelines/dagster-jobs/dagster_jobs/run_config_rankings.yaml'])
+    config=config_from_files(config_files=[os.environ["CONFIG_SEASON_RANKINGS_PATH"]])
+)
+
+season_report_job_women = define_asset_job(
+    name="season_report_women",
+    selection=AssetSelection.groups(RANKINGS_WOMEN),
+    config=config_from_files(config_files=[os.environ["CONFIG_SEASON_RANKINGS_PATH_WOMEN"]])
 )
 
 drop_stage_daily_scoreboard = create_drop_table_op("stage_daily_scoreboard")

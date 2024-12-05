@@ -46,7 +46,7 @@
             padding: 0em;
         }
         #toplines .high-rank {
-            border: solid 0.25em red;
+            border: solid 0.25em darkred;
         }
         #toplines .low-rank {
             border: none;
@@ -150,9 +150,9 @@
         <div>
             <h1>
                 {% if dates.start==dates.end %}
-                Top Lines for {{ dates.end }}
+                Top Ladies for {{ dates.end }}
                 {% else %}
-                Top Lines for {{ dates.start }} to {{ dates.end }}
+                Top Ladies for {{ dates.start }} to {{ dates.end }}
                 {% endif %}
             </h1>
             <div>
@@ -164,7 +164,6 @@
                 <h1>Notes</h1>
                 <h4>
                     <ul>
-                        <li>Age, if available, is given on Draft Night (June 25, 2025).</li>
                         <li>Next to class ranking is personal game rank (eg #3/8=3rd best game out of 8 played)</li>
                         <li>
                             <table style="width: fit-content;">
@@ -178,8 +177,8 @@
                        </li>
                         <li>▲=1 std dev above season avg ▲▲=2 std dev</li>
                         <li>Unassisted makes are given by a number followed by "u" (eg 3u)</li>
-                        <li>Top 100 RSCI have red border.</li>
-                        <li>School ranking based on regression model.</li>
+                        <li>HoopGurlz ranked ladies are highlighted red.</li>
+                        <li>Team rankings are determined by regression model.</li>
                     </ul>        
                 </h4>
             </div>
@@ -214,7 +213,7 @@
                 </div>
             </div>
         </div>
-        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        {% for class in ['SR','JR','SO','FR'] %}
         <div>
             <h1>
                 {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
@@ -222,7 +221,7 @@
         </div>
         <div class="grid-container">
             {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
-            {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.ez>2.0) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.avg>3.0) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
             <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('{{ player.team_logo}}');
@@ -255,12 +254,12 @@
                         </div>
                     </div>
                     <div class="card-header">
-                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                        <a href="https://www.espn.com/womens-college-basketball/player/_/id/{{ player.player_id }}">
                             <div class="player-bio">
                                 {% if player.headshot_href %}
                                 <img src={{ player.headshot_href }} class="shadow-headshot">
                                 {% else %}
-                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/7159c033-33ac-c6bb-45f4-a59c5117c6a1.png" class="missing-headshot">
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/a298273e-d4e2-500c-446f-fc1f44c0e4f4.png" class="missing-headshot">
                                 {% endif %}
                                 <br>
                                 #{{ player.jersey | int }}
@@ -281,7 +280,7 @@
                             {{ player.city }}, {{ player.country }}
                             {% endif %}  
                             <br>  
-                            #{{ player.team_rank }} {{ player.team_location}} 
+                            #{{ player.team_rank }} {{ player.team_location}}
                             <br>
                             {{ player.team_conf }}
                             {% if player.age_at_draft>0 %}
@@ -290,7 +289,7 @@
                             {% endif %}
                             {% if player.recruit_rank>0 %}
                             <br>
-                            #{{ player.recruit_rank | int}} RSCI
+                            #{{ player.recruit_rank | int}} HoopGurlz
                             {% endif %}
                         </div>
                     </div> 
@@ -299,8 +298,8 @@
                         {% if player.starter %}played {{ player.minutes }} minutes as starter in {% else %}played {{ player.minutes }} minutes off the bench in {% endif %}
                         {% if (player.team_pts-player.opp_pts) > 0 %}win{% else %}loss{% endif %}
                         {% if player.home %} vs {% else %} at {% endif %}
-                        <span style="font-weight: bold;">#{{player.opp_rank }} {{ player.opp_location }}</span> 
-                        <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/{{ player.game_id }}">
+                        <span style="font-weight: bold;">#{{player.opp_rank }} {{ player.opp_location }}</span>
+                        <a href="https://www.espn.com/womens-college-basketball/boxscore/_/gameId/{{ player.game_id }}">
                             {{ player.team_pts }} - {{ player.opp_pts }}
                         </a>
                         on {{ player.date.strftime('%-m/%-d') }}.
@@ -360,7 +359,6 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>dunk</th>
                                         <th>layup</th>
                                         <th>mid</th>
                                         <th>2pt</th>
@@ -370,7 +368,6 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td style="background-color: hsla(60, {{ player.shots_struct.dunkspctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.dunks }}</td>
                                         <td style="background-color: hsla(60, {{ player.shots_struct.layupspctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.layups }}</td>
                                         <td style="background-color: hsla(60, {{ player.shots_struct.midrangepctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.midrange }}</td>
                                         <td style="background-color: hsla(60, {{ player.shots_struct.twospctile }}%, 50%, {{ TD_ALPHA }});">{{ player.shots_struct.twos }}</td>
@@ -382,7 +379,6 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>dunk ast</th>
                                         <th>lay ast</th>
                                         <th>mid ast</th>
                                         <th>2pt ast</th>
@@ -392,7 +388,6 @@
                                 <tbody>
                                     {% if player.stats.ast > 0 %}
                                     <tr>
-                                        <td>{{ player.assists.dunks }}</td>
                                         <td>{{ player.assists.layups }}</td>
                                         <td>{{ player.assists.midrange }}</td>
                                         <td>{{ player.assists.layups + player.assists.dunks + player.assists.midrange }}</td>

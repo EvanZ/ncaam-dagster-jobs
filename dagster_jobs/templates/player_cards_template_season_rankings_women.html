@@ -147,12 +147,12 @@
 <body>
     {% set TD_ALPHA = "70%" %}
     <div id="toplines">
-        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        {% for class in ['SR', 'JR', 'SO', 'FR'] %}
         <h1>
             {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
         </h1>
         <div class="grid-container">
-            {% for player in players if ((player.experience_abbreviation in class) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.class_rank <= 75)) %}
             <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
@@ -163,7 +163,7 @@
                             {{ player.class_rank }}
                         </div>
                         <div>
-                            <table style="margin-bottom: 0.5em;">
+                            <table >
                                 <tr>
                                     <td style="background-color: hsla(60, {{ player.ez_game_pctile }}%, 50%, {{ TD_ALPHA }});">
                                         {{ player.game_score | round(1) }}
@@ -172,24 +172,24 @@
                                         {{ ((75.0 * player.ez * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
                                     </td>
                                     <td style="background-color: hsla(60, {{ player.ez_struct.score_pctile }}%, 50%, {{ TD_ALPHA }});">
-                                        {{ (75.0*player.ez_struct.ez_scoring* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
-                                    </td>
-                                    <td style="background-color: hsla(60, {{ player.ez_struct.def_pctile }}%, 50%, {{ TD_ALPHA }});">
-                                        {{ (75.0*player.ez_struct.ez_defense* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                        {{ ((75.0 * player.ez_struct.ez_scoring * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
                                     </td>
                                     <td style="background-color: hsla(60, {{ player.ez_struct.pass_pctile }}%, 50%, {{ TD_ALPHA }});">
-                                        {{ (75.0*player.ez_struct.ez_passing* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                        {{ ((75.0 * player.ez_struct.ez_passing * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
                                     </td>
                                     <td style="background-color: hsla(60, {{ player.ez_struct.reb_pctile }}%, 50%, {{ TD_ALPHA }});">
-                                        {{ (75.0*player.ez_struct.ez_rebounding* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                        {{ ((75.0 * player.ez_struct.ez_rebounding * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.def_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ ((75.0 * player.ez_struct.ez_defense * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
                                     </td>
                                 </tr>
                                 <tr>
                                     <th>EZ</th>
                                     <th>EZ75</th>
-                                    <th>Off</th>
-                                    <th>Def</th>
+                                    <th>Score</th>
                                     <th>Pass</th>
+                                    <th>Def</th>
                                     <th>Reb</th>
                                 </tr>
                             </table>    
@@ -201,7 +201,7 @@
                                 {% if player.headshot_href %}
                                 <img src={{ player.headshot_href }} class="shadow-headshot">
                                 {% else %}
-                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/7159c033-33ac-c6bb-45f4-a59c5117c6a1.png" class="missing-headshot">
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/a298273e-d4e2-500c-446f-fc1f44c0e4f4.png" class="missing-headshot">
                                 {% endif %}
                                 <br>
                                 #{{ player.jersey | int }}
@@ -217,12 +217,12 @@
                             {{ player.experience_display_value }}&nbsp;{{ player.position_display_name }}
                             <br>
                             {% if player.state %}
-                            {{ player.city }}, {{ player.state }}
+                            {{ player.city }}%, {{ player.state }}
                             {% else %}
-                            {{ player.city }}, {{ player.country }}
+                            {{ player.city }}%, {{ player.country }}
                             {% endif %}  
                             <br>  
-                            #{{ player.team_rank }} {{ player.team_location}} (#{{ player.sos }})
+                            {{ player.team_location}}
                             <br>
                             {{ player.team_conf }}
                             {% if player.age_at_draft>0 %}
@@ -231,7 +231,7 @@
                             {% endif %}
                             {% if player.recruit_rank>0 %}
                             <br>
-                            #{{ player.recruit_rank | int}} RSCI
+                            #{{ player.recruit_rank | int}} HoopGurlz
                             {% endif %}
                         </div>
                     </div> 
@@ -252,7 +252,7 @@
                                 <td>
                                     {{ player.gp | int }}
                                 </td>
-                                <td style="background-color: hsla(60, {{ player.mpgpctile }}%, 50%, {{ TD_ALPHA }});">
+                                <td style="background-color: hsla(60, {{ player.mpgpctile }}%,50%, {{ TD_ALPHA }});">
                                     {{ (player.minutes / player.gp) | round | int }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.tspctile }}%, 50%, {{ TD_ALPHA }});">
@@ -298,31 +298,23 @@
                         </table>
                         <table>
                             <tr>
-                              <th>dnk</th>
-                              <th>dnk%</th>
                               <th>lay</th>
                               <th>lay%</th>
                               <th>mid</th>
                               <th>mid%</th>
                             </tr>
                             <tr>
-                                <td style="background-color: hsla(60, {{ player.shooting.dunka100pctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shots.ast_dunk + player.shots.unast_dunk }}-{{ player.shots.ast_dunk + player.shots.unast_dunk + player.shots.miss_dunk }}
-                                </td>
-                                <td style="background-color: hsla(60, {{ player.shooting.dunkpctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.dunkpct | int }}%
-                                </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.layupa100pctile }}%, 50%, {{ TD_ALPHA }});">
                                     {{ player.shots.ast_layup + player.shots.unast_layup }}-{{ player.shots.ast_layup + player.shots.unast_layup + player.shots.miss_layup }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.layuppctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.layuppct | int }}%
+                                    {{ player.shooting.layuppct | int }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.mida100pctile }}%, 50%, {{ TD_ALPHA }});">
                                     {{ player.shots.ast_mid + player.shots.unast_mid }}-{{ player.shots.ast_mid + player.shots.unast_mid + player.shots.miss_mid }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.midpctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.midpct | int }}%
+                                    {{ player.shooting.midpct | int }}
                                 </td>
                             </tr>
                         </table>
@@ -343,19 +335,19 @@
                                     {{ player.shots.fg2m }}-{{ player.shots.fg2a }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.fg2pctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.fg2pct | int }}%
+                                    {{ player.shooting.fg2pct | int }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.fg3a100pctile }}%, 50%, {{ TD_ALPHA }});">
                                     {{ player.shots.fgm - player.shots.fg2m }}-{{ player.shots.fga - player.shots.fg2a }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.fg3pctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.fg3pct | int }}%
+                                    {{ player.shooting.fg3pct | int }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.fta100pctile }}%, 50%, {{ TD_ALPHA }});">
                                     {{ player.shots.ftm }}-{{ player.shots.fta }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.ftpctpctile }}%, 50%, {{ TD_ALPHA }});">
-                                    {{ player.shooting.ftpct | int }}%
+                                    {{ player.shooting.ftpct | int }}
                                 </td>
                                 <td style="background-color: hsla(60, {{ player.shooting.ftrpctile }}%, 50%, {{ TD_ALPHA }});">
                                     {{ player.shooting.ftr | round(2) }}
@@ -380,10 +372,10 @@
                                     <td style="background-color: hsla(60, {{ player.passing.astpctpctile }}%, 50%, {{ TD_ALPHA }});">
                                         {{ player.passing.astpct | round(1) }}
                                     </td>
-                                    <td style="background-color: hsla(60, {{ 100.0 - player.passing.tov100pctile }}%, 50%, {{ TD_ALPHA }});">
+                                    <td style="background-color: hsla(60, {{  player.passing.tov100pctile }}%, 50%, {{ TD_ALPHA }});">
                                         {{ player.passing.tov100 | round(1) }}
                                     </td>
-                                    <td style="background-color: hsla(60, {{ 100.0 - player.passing.tovpctpctile }}%, 50%, {{ TD_ALPHA }});">
+                                    <td style="background-color: hsla(60, {{  player.passing.tovpctpctile }}%, 50%, {{ TD_ALPHA }});">
                                         {{ player.passing.tovpct | round(1) }}
                                     </td>
                                     <td style="background-color: hsla(60, {{ player.passing.atrpctile }}%, 50%, {{ TD_ALPHA }});">

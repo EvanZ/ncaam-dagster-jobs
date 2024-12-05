@@ -41,7 +41,7 @@ def create_table_stage_conferences(women: bool=False) -> str:
     """
 
     create_query = lambda women: f"""
-        create table if not exists {'stage_women_conferences' if women else 'stage_conferences'} (
+        create table if not exists {'stage_conferences_women' if women else 'stage_conferences'} (
             id INTEGER PRIMARY KEY,
             name STRING,
             shortName STRING,
@@ -52,12 +52,12 @@ def create_table_stage_conferences(women: bool=False) -> str:
     query = create_query(women)
     return query
 
-def create_table_stage_players(women:bool) -> str:
+def create_table_stage_players(women:bool=False) -> str:
     """
     create players staging table
     """
     return f"""
-    create table if not exists {'stage_women_players' if women else 'stage_players'} (
+    create table if not exists {'stage_players_women' if women else 'stage_players'} (
         id INT PRIMARY KEY,
         team_id INT,
         guid UUID,
@@ -93,7 +93,7 @@ def create_table_stage_teams(women: bool = False) -> str:
     create the teams table
     """
     generate_query = lambda women: f"""
-    create table if not exists {'stage_women_teams' if women else 'stage_teams'} (
+    create table if not exists {'stage_teams_women' if women else 'stage_teams'} (
         season INT,
         conferenceName STRING,
         shortConferenceName STRING,
@@ -123,7 +123,7 @@ def insert_table_stage_conferences(path: str, women:bool=False) -> str:
     """
 
     insert_query = lambda women: f"""
-    insert or ignore into {'stage_women_conferences' if women else 'stage_conferences'}
+    insert or ignore into {'stage_conferences_women' if women else 'stage_conferences'}
     select
         groupId as id,
         name,
@@ -144,7 +144,7 @@ def insert_table_stage_players(path: list[str], women: bool=False) -> str:
     insert players into staging table
     """
     return f"""
-    insert or ignore into {'stage_women_players' if women else 'stage_players'}
+    insert or ignore into {'stage_players_women' if women else 'stage_players'}
     select
         id::INT as id,
         team_id::INT as team_id,
@@ -188,7 +188,7 @@ def insert_table_stage_teams(path: str, women: bool=False) -> str:
     insert teams data into staging table
     """
     generate_query = lambda women: f"""
-    insert or ignore into {'stage_women_teams' if women else 'stage_teams'}
+    insert or ignore into {'stage_teams_women' if women else 'stage_teams'}
     select
         season,
         name as conferenceName,
@@ -743,12 +743,12 @@ def stage_player_assists_by_game(date: str, women: bool=False) -> str:
     returning game_id, team_id, player_id, ast_to_dunk, ast_to_layup, ast_to_mid, ast_to_3pt;
     """
 
-def create_table_stage_top_lines() -> str:
+def create_table_stage_top_lines(women: bool=False) -> str:
     """
     table for storing daily player stats that will be used to create Top Lines reports
     """
     return f"""
-        create table if not exists stage_top_lines (
+        create table if not exists {'stage_top_lines_women' if women else 'stage_top_lines'} (
             player_id INT,
             name VARCHAR,
             years TINYINT,
@@ -809,9 +809,9 @@ def create_table_stage_top_lines() -> str:
         );
     """
 
-def insert_table_stage_top_lines(date: str) -> str:
+def insert_table_stage_top_lines(date: str, women: bool=False) -> str:
     return f"""
-    insert or ignore into stage_top_lines
+    insert or ignore into {"stage_top_lines_women" if women else "stage_top_lines"}
     with lines as (
             select
                 player_id,
@@ -838,29 +838,29 @@ def insert_table_stage_top_lines(date: str) -> str:
                 stats.tov,
                 stats.pf,
                 stats.pts
-            from stage_player_lines
+            from {'stage_player_lines_women' if women else 'stage_player_lines'}
         ),
         players as (
             select
                 id,
                 experience_years as years
-            from stage_players
+            from {'stage_players_women' if women else 'stage_players'}
         ),
         team_adj as (
         pivot
             (select
                 team_id,
                 stat,
-                ortg,
-                drtg
-            from stage_box_stat_adjustment_factors
+                coalesce(ortg,1.0) as ortg,
+                coalesce(drtg,1.0) as drtg
+            from {'stage_box_stat_adjustment_factors_women' if women else 'stage_box_stat_adjustment_factors'}
             union all
             select
                 team_id,
                 stat,
-                ortg,
-                drtg
-            from stage_shot_type_adjustment_factors)
+                coalesce(ortg,1.0) as ortg,
+                coalesce(drtg,1.0) as drtg
+            from {'stage_shot_type_adjustment_factors_women' if women else 'stage_shot_type_adjustment_factors'})
         on stat using any_value(ortg) as ortg, any_value(drtg) as drtg
         group by team_id
         ),
@@ -869,16 +869,16 @@ def insert_table_stage_top_lines(date: str) -> str:
             (select
                 team_id,
                 stat,
-                ortg,
-                drtg
-            from stage_box_stat_adjustment_factors
+                coalesce(ortg,1.0) as ortg,
+                coalesce(drtg,1.0) as drtg
+            from {'stage_box_stat_adjustment_factors_women' if women else 'stage_box_stat_adjustment_factors'}
             union all
             select
                 team_id,
                 stat,
-                ortg,
-                drtg
-            from stage_shot_type_adjustment_factors)
+                coalesce(ortg,1.0) as ortg,
+                coalesce(drtg,1.0) as drtg
+            from {'stage_shot_type_adjustment_factors_women' if women else 'stage_shot_type_adjustment_factors'})
         on stat using any_value(ortg) as ortg, any_value(drtg) as drtg
         group by team_id
         )
@@ -949,7 +949,7 @@ def insert_table_stage_top_lines(date: str) -> str:
                 + (-0.7)*(miss_tip  
                     + miss_dunk/(ta.miss_dunk_ortg*oa.miss_dunk_drtg)
                     + miss_layup/(ta.miss_layup_ortg*oa.miss_layup_drtg)
-                    + miss_dunk/(ta.miss_mid_ortg*oa.miss_mid_drtg)
+                    + miss_mid/(ta.miss_mid_ortg*oa.miss_mid_drtg)
                     + miss_3pt/(ta.miss_3pt_ortg*oa.miss_3pt_drtg)) 
                 + 0.5*ftm
                 - 0.5*(fta-ftm) 
@@ -975,7 +975,7 @@ def insert_table_stage_top_lines(date: str) -> str:
                 + (-0.7)*(miss_tip  
                     + miss_dunk/(ta.miss_dunk_ortg*oa.miss_dunk_drtg)
                     + miss_layup/(ta.miss_layup_ortg*oa.miss_layup_drtg)
-                    + miss_dunk/(ta.miss_mid_ortg*oa.miss_mid_drtg)
+                    + miss_mid/(ta.miss_mid_ortg*oa.miss_mid_drtg)
                     + miss_3pt/(ta.miss_3pt_ortg*oa.miss_3pt_drtg)) 
                 + 0.5*ftm
                 - 0.5*(fta-ftm) 
@@ -988,9 +988,9 @@ def insert_table_stage_top_lines(date: str) -> str:
                 stocks:=1.0*(stl/(ta.stl_drtg*oa.stl_ortg))
                 + 0.7*(blk/(ta.blk_drtg*oa.blk_ortg))
             ) as ez_components
-        from lines l join stage_player_shots_by_game s on l.game_id=s.game_id
+        from lines l join {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'} s on l.game_id=s.game_id
         and l.player_id=s.player_id 
-        left join stage_player_assists_by_game a on l.game_id=a.game_id
+        left join {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'} a on l.game_id=a.game_id
         and l.player_id=a.player_id
         join team_adj ta on l.team_id=ta.team_id
         join opp_adj oa on l.opp_id=oa.team_id
@@ -1000,13 +1000,13 @@ def insert_table_stage_top_lines(date: str) -> str:
         returning player_id, name, years, game_id, ez;
     """
 
-def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: int) -> str:
+def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: int, women: bool=False) -> str:
     """
     build the top lines html report query
     """
     return f"""
     with games as (
-        from stage_top_lines
+        from {'stage_top_lines_women' if women else 'stage_top_lines'}
         where years in ({', '.join(map(str, exp))})
         and date between '{start_date}' and '{end_date}'
         order by ez desc
@@ -1022,15 +1022,17 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             max(ez) over (partition by player_id) as inf,
             median(ez) over (partition by player_id) as med,
             rank() over (partition by player_id order by ez desc) as game_rank
-        from stage_top_lines
+        from {'stage_top_lines_women' if women else 'stage_top_lines'}
     )
     select
         rank() over (partition by experience_abbreviation order by ez desc)        as class_rank,
         g.player_id,
         g.game_id,
         games,
-        RSCI as recruit_rank,
+        {"recruiting.rank" if women else "RSCI"} as recruit_rank,
         DATE '2025-06-25' - birthday::DATE as age_at_draft,
+        tr.rank as team_rank,
+        tro.rank as opp_rank,
         case when home then team_2_logo else team_1_logo end as team_logo,
         case when home then team_2_location else team_1_location end as team_location,
         case when home then team_1_logo else team_2_logo end as opp_logo,
@@ -1199,16 +1201,18 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
             else ''
         end as notable
     from games g join metrics m on g.player_id=m.player_id and g.game_id=m.game_id
-    join stage_game_logs sgl on g.game_id=sgl.game_id
-    left join stage_players p on g.player_id=p.id
-    left join stage_rsci_rankings rsci on p.full_name=rsci.Player
+    join {'stage_game_logs_women' if women else 'stage_game_logs'} sgl on g.game_id=sgl.game_id
+    left join {'stage_players_women' if women else 'stage_players'} p on g.player_id=p.id
+    left join {'stage_hoopgurlz_rankings' if women else 'stage_rsci_rankings'} recruiting on p.full_name=recruiting.{'name' if women else 'Player'}
     left join stage_prospect_birthdays b on p.full_name=b.name
-    join stage_teams t1 on g.team_id=t1.id
-    join stage_teams t2 on g.opp_id=t2.id
+    join {'stage_teams_women' if women else 'stage_teams'} t1 on g.team_id=t1.id
+    join {'stage_teams_women' if women else 'stage_teams'} t2 on g.opp_id=t2.id
+    join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tr on g.team_id=tr.team_id
+    join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tro on g.opp_id=tro.team_id
     order by class_rank asc;
     """
 
-def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int], top_n: int) -> str:
+def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int], top_n: int, women: bool=False) -> str:
     """
     build the top lines html report query
     """
@@ -1269,22 +1273,61 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
             sum(ez_components.scoring) as ez_scoring,
             sum(ez_components.passing) as ez_passing,
             sum(ez_components.stocks) as ez_defense
-        from stage_top_lines tl join stage_game_logs g on tl.game_id=g.game_id
+        from {'stage_top_lines_women' if women else 'stage_top_lines'} tl 
+        join {'stage_game_logs_women' if women else 'stage_game_logs'} g on tl.game_id=g.game_id
         where years in ({', '.join(map(str, exp))})
         and tl.date between '{start_date}' and '{end_date}'
         group by player_id
         order by ez desc
         limit {top_n}
+    ),
+    sos as (
+        with team_games as (
+            with schedules as (
+                with games as (
+                select
+                    team_1_id as team_id,
+                    game_id
+                from stage_game_logs
+                where (team_1_pts is not null) and not ((team_1_logo is null) or (team_2_logo is null))
+                union
+                select
+                    team_2_id as team_id,
+                    game_id
+                from stage_game_logs
+                where (team_2_pts is not null) and not ((team_1_logo is null) or (team_2_logo is null))
+                )
+                select
+                    team_id,
+                    list(game_id) as games
+                from games
+                group by team_id
+            )
+            select
+                team_id,
+                unnest(games) as game_id
+            from schedules
+        )
+        select
+            team.team_id,
+            rank() over (order by avg(ortg-drtg) desc) as avg
+        from team_games team join team_games opp on team.game_id=opp.game_id
+            and team.team_id<>opp.team_id
+            join stage_teams teams on teams.id=team.team_id
+            join stage_teams opps on opps.id=opp.team_id
+            join stage_team_ratings tr on opp.team_id=tr.team_id
+        group by ALL
     )
     select
         s.player_id,
-        RSCI as recruit_rank,
+        {'RSCI' if not women else 'recruiting.rank'} as recruit_rank,
         DATE '2025-06-25' - birthday::DATE as age_at_draft,
         display_name,
         location as team_location,
         color,
         alternateColor as alternate_color,
-        team_id,
+        tr.rank as team_rank,
+        sos.avg as sos,
         shortConferenceName as team_conf,
         experience_abbreviation,
         experience_display_value,
@@ -1379,8 +1422,10 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
             ftpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 ftm/nullif(fta,0) asc)),
             dunkpct:=100*(unast_dunk+ast_dunk)/nullif(unast_dunk+ast_dunk+miss_dunk,0),
-            dunkpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
-                (unast_dunk+ast_dunk)/nullif(unast_dunk+ast_dunk+miss_dunk,0) asc)),
+            dunkpctpctile:=case when (unast_dunk+ast_dunk+miss_dunk)==0 then 0
+            else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ((unast_dunk+ast_dunk)/nullif(unast_dunk+ast_dunk+miss_dunk,0)) asc))
+                end,
             dunka100:=cast(100.0 * (unast_dunk+ast_dunk+miss_dunk) * team_minutes / (minutes * team_poss) as numeric),
             dunka100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 (unast_dunk+ast_dunk+miss_dunk) * team_minutes / (minutes * team_poss) asc)),
@@ -1463,9 +1508,11 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
             blkpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 blk * team_minutes / (minutes*(opp_fga-opp_fg3a))))
         ) as defense
-    from stats s join stage_players p on s.player_id=p.id
-    left join stage_rsci_rankings rsci on p.full_name=rsci.Player
+    from stats s join {'stage_players_women' if women else 'stage_players'} p on s.player_id=p.id
+    left join {'stage_rsci_rankings' if not women else 'stage_hoopgurlz_rankings'} rsci on p.full_name=rsci.{'Player' if not women else 'name'}
     left join stage_prospect_birthdays b on p.full_name=b.name
-    join stage_teams t on p.team_id=t.id
+    join {'stage_teams_women' if women else 'stage_teams'} t on p.team_id=t.id
+    join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tr on p.team_id=tr.team_id
+    join sos on p.team_id=sos.team_id
     order by class_rank asc;
     """

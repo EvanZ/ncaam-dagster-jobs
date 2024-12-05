@@ -47,15 +47,49 @@ from .constants import (
     DUCKDB,
     DAILY,
     DAILY_WOMEN,
-    RANKINGS,
+    RANKINGS_WOMEN,
     SEASONAL,
-    TOP_LINES
+    TOP_LINES,
+    TOP_LINES_WOMEN
     )
 from ..partitions import daily_partition
 from ..resources import LocalFileStorage, JinjaTemplates
 from ..utils.utils import fetch_data
 
 warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
+
+@asset(
+    group_name=SEASONAL,
+    compute_kind=DUCKDB,
+    config_schema={
+        "path": str
+    }
+)
+def stage_hoopgurlz_rankings(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    stage rsci rankings from csv files
+    """
+    path = os.path.join(context.op_config["path"], "*.csv")
+    context.log.info(path)
+
+    with database.get_connection() as conn:
+        conn.execute("drop table if exists stage_hoopgurlz_rankings;")
+        conn.execute(f"""
+                     create table stage_hoopgurlz_rankings as (
+                     from read_csv('{path}', header=true, filename=true)
+                     );
+                     """)
+        schema = conn.execute("describe from stage_hoopgurlz_rankings limit 1;").df()
+        df = conn.execute("from stage_hoopgurlz_rankings;").df()
+        context.log.info(schema)
+    
+    return MaterializeResult(
+        metadata={
+            "schema": MetadataValue.md(schema.to_markdown()),
+            "count": MetadataValue.int(len(df)),
+            "sample": MetadataValue.md(df.sample(n=50).to_markdown())
+        }
+    )
 
 @asset(
     group_name=DAILY_WOMEN,
@@ -298,15 +332,16 @@ def stage_plays_women(context: AssetExecutionContext, database: DuckDBResource, 
 def stage_player_shots_by_game_women(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     partition_date = context.partition_key
 
-    with database.get_connection() as conn:
-        create_query = queries.create_table_stage_player_shots_by_game(women=True)
-        context.log.info(create_query)
-        conn.execute(create_query)
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            create_query = queries.create_table_stage_player_shots_by_game(women=True)
+            context.log.info(create_query)
+            conn.execute(create_query)
 
-        insert_query = queries.insert_table_stage_player_shots_by_game(partition_date, women=True)
-        context.log.info(insert_query)
-        res = conn.execute(insert_query).fetchnumpy()
-        df = conn.execute(f"from stage_player_shots_by_game_women where date='{partition_date}' limit 50;").df()
+            insert_query = queries.insert_table_stage_player_shots_by_game(partition_date, women=True)
+            context.log.info(insert_query)
+            res = conn.execute(insert_query).fetchnumpy()
+            df = conn.execute(f"from stage_player_shots_by_game_women where date='{partition_date}' limit 50;").df()
 
     return MaterializeResult(
         metadata={
@@ -324,14 +359,15 @@ def stage_player_shots_by_game_women(context: AssetExecutionContext, database: D
 def stage_player_assists_by_game_women(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     date = context.partition_key
 
-    with database.get_connection() as conn:
-        create_query = queries.create_table_stage_player_assists_by_game(women=True)
-        context.log.info(create_query)
-        conn.execute(create_query)
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            create_query = queries.create_table_stage_player_assists_by_game(women=True)
+            context.log.info(create_query)
+            conn.execute(create_query)
 
-        insert_query = queries.stage_player_assists_by_game(date, women=True)
-        context.log.info(insert_query)
-        df = conn.execute(insert_query).df()
+            insert_query = queries.stage_player_assists_by_game(date, women=True)
+            context.log.info(insert_query)
+            df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -340,158 +376,160 @@ def stage_player_assists_by_game_women(context: AssetExecutionContext, database:
         }
     )
 
-# @asset(
-#     deps=[
-#         "stage_player_lines", 
-#         "stage_player_shots_by_game", 
-#         "stage_players",
-#         "stage_player_assists_by_game"
-#     ],
-#     partitions_def=daily_partition,
-#     group_name=DAILY,
-#     compute_kind=DUCKDB,
-#     check_specs=[AssetCheckSpec(name="has_at_least_one_player", asset="stage_top_lines")],
-# )
-# def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) -> Generator:
-#     """
-#     stage table that will be turned into html report
-#     """
-#     partition_date = context.partition_key
-#     context.log.info(f'partition_date: {partition_date}')
+@asset(
+    deps=[
+        "stage_player_lines_women", 
+        "stage_player_shots_by_game_women", 
+        "stage_players_women",
+        "stage_player_assists_by_game_women",
+        "stage_box_stat_adjustment_factors_women",
+        "stage_shot_type_adjustment_factors_women"
+    ],
+    partitions_def=daily_partition,
+    group_name=DAILY_WOMEN,
+    compute_kind=DUCKDB,
+    check_specs=[AssetCheckSpec(name="has_at_least_one_player", asset="stage_top_lines_women")],
+)
+def stage_top_lines_women(context: AssetExecutionContext, database: DuckDBResource) -> Generator:
+    """
+    stage table that will be turned into html report
+    """
+    partition_date = context.partition_key
+    context.log.info(f'partition_date: {partition_date}')
 
-#     sql_query = queries.insert_table_stage_top_lines(date=partition_date)
-
-#     with database.get_connection() as conn:
-#         context.log.info(queries.create_table_stage_top_lines())
-#         conn.execute(queries.create_table_stage_top_lines())
-#         context.log.info(sql_query)
-#         df = conn.execute(sql_query).df()
-
-#     has_at_least_one_player = bool(len(df['player_id']) > 0)
-
-#     yield AssetCheckResult(
-#                 passed=has_at_least_one_player,
-#                 check_name="has_at_least_one_player"
-#     )
-
-#     # if not has_at_least_one_player:
-#     #     raise Exception("No players inserted into staging table. Check for empty schedule? Aborting further materialization.")
-        
-#     yield Output(
-#         value=df,
-#         metadata={
-#             "query": MetadataValue.md(sql_query),
-#             "num_players": MetadataValue.int(len(df['player_id'])),
-#             "top_10": MetadataValue.md(df.head(10).to_markdown())
-#         }
-#     )
-
-# def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefinition:
-#     @asset(
-#         name=f"top_lines_html_table_for_{name}",
-#         deps=["stage_top_lines"],
-#         config_schema={
-#             "start_date": Field(String, is_required=True),
-#             "end_date": Field(String, is_required=True),
-#             "top_n": Field(Int, default_value=50, is_required=False)
-#         },
-#         group_name=TOP_LINES,
-#         compute_kind=PYTHON
-#     )
-#     def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
-#         """
-#         create html report for newsletter
-#         """
-#         start_date = context.op_config['start_date']
-#         end_date = context.op_config['end_date']
-#         top_n = context.op_config['top_n']
-
-#         with database.get_connection() as conn:
-#             df = conn.execute(query=queries.top_lines_report_query(
-#                 start_date=start_date,
-#                 end_date=end_date,
-#                 exp=exp,
-#                 top_n=top_n
-#             )).df()
-
-#         # Set up Jinja2 environment to load templates from the current directory
-#         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-#         player_card_template = env.get_template("player_cards_template_all_loop_tables.html")
-
-#         # Convert DataFrame to a list of dictionaries
-#         players = df.to_dict(orient="records")
-
-#         # Render the template with player data
-#         html_content = player_card_template.render(players=players, dates={
-#             'start': datetime.strptime(start_date, "%Y-%m-%d").strftime('%b. %d'),
-#             'end': datetime.strptime(end_date, "%Y-%m-%d").strftime('%b. %d')
-#         })
-#         path = os.path.join(storage.filepath, "top_lines", end_date)
-#         os.makedirs(path, exist_ok=True)
-#         with open(os.path.join(path, f"{name}.html"), "w") as f:
-#             f.write(html_content)
-        
-#         return MaterializeResult(
-#             metadata={
-#                 "df": MetadataValue.md(df.to_markdown())
-#             }
-#         )
+    create_query = queries.create_table_stage_top_lines(women=True)
+    context.log.info(create_query)
     
-#     return _asset
+    insert_query = queries.insert_table_stage_top_lines(date=partition_date, women=True)
+    context.log.info(insert_query)
 
-# # freshmen_tl = build_top_lines_html_table(exp=[0,1], name="freshmen")
-# # sophomores_tl = build_top_lines_html_table(exp=[2], name="sophomores")
-# # upperclassmen_tl = build_top_lines_html_table(exp=[3,4,5], name="upperclassmen")
-# all_tl = build_top_lines_html_table(exp=[0,1,2,3,4,5], name="all")
+    with database.get_connection() as conn:
+        conn.execute(create_query)
+        df = conn.execute(insert_query).df()
 
-# def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDefinition:
-#     @asset(
-#         name=f"season_rankings_report_for_{name}",
-#         deps=["stage_top_lines", "stage_players", "stage_teams"],
-#         config_schema={
-#             "start_date": Field(String, is_required=True),
-#             "end_date": Field(String, is_required=True),
-#             "top_n": Field(Int, default_value=50, is_required=False)
-#         },
-#         group_name=RANKINGS,
-#         compute_kind=PYTHON
-#     )
-#     def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
-#         """
-#         create html report for newsletter
-#         """
-#         start_date = context.op_config['start_date']
-#         end_date = context.op_config['end_date']
-#         top_n = context.op_config['top_n']
+    has_at_least_one_player = bool(len(df['player_id']) > 0)
 
-#         with database.get_connection() as conn:
-#             df = conn.execute(query=queries.prospect_rankings_report_query(
-#                 start_date=start_date,
-#                 end_date=end_date,
-#                 exp=exp,
-#                 top_n=top_n
-#             )).df()
+    yield AssetCheckResult(
+                passed=has_at_least_one_player,
+                check_name="has_at_least_one_player"
+    )
 
-#         # Set up Jinja2 environment to load templates from the current directory
-#         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-#         template = env.get_template("player_cards_template_season_rankings.html")
-
-#         # Convert DataFrame to a list of dictionaries
-#         players = df.to_dict(orient="records")
-
-#         # Render the template with player data
-#         html_content = template.render(players=players)
-#         path = os.path.join(storage.filepath, "rankings", end_date)
-#         os.makedirs(path, exist_ok=True)
-#         with open(os.path.join(path, f"{name}.html"), "w") as f:
-#             f.write(html_content)
+    if not has_at_least_one_player:
+        raise Exception("No players inserted into staging table. Check for empty schedule? Aborting further materialization.")
         
-#         return MaterializeResult(
-#             metadata={
-#                 "df": MetadataValue.md(df.to_markdown())
-#             }
-#         )
-    
-#     return _asset
+    yield Output(
+        value=df,
+        metadata={
+            "num_players": MetadataValue.int(len(df['player_id'])),
+            "top_10": MetadataValue.md(df.head(10).to_markdown())
+        }
+    )
 
-# prospect_rankings_report = build_season_rankings_report(exp=[0,1,2,3,4,5], name="all")
+def build_top_lines_html_table_women(exp: list[int], name: str="report") -> AssetsDefinition:
+    @asset(
+        name=f"top_lines_html_table_for_{name}_women",
+        deps=["stage_top_lines_women"],
+        config_schema={
+            "start_date": Field(String, is_required=True),
+            "end_date": Field(String, is_required=True),
+            "top_n": Field(Int, default_value=50, is_required=False)
+        },
+        group_name=TOP_LINES_WOMEN,
+        compute_kind=PYTHON
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
+        """
+        create html report for newsletter
+        """
+        start_date = context.op_config['start_date']
+        end_date = context.op_config['end_date']
+        top_n = context.op_config['top_n']
+
+        with database.get_connection() as conn:
+            df = conn.execute(query=queries.top_lines_report_query(
+                start_date=start_date,
+                end_date=end_date,
+                exp=exp,
+                top_n=top_n,
+                women=True
+            )).df()
+
+        # Set up Jinja2 environment to load templates from the current directory
+        env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
+        player_card_template = env.get_template("player_cards_template_all_loop_tables_women.html")
+
+        # Convert DataFrame to a list of dictionaries
+        players = df.to_dict(orient="records")
+
+        # Render the template with player data
+        html_content = player_card_template.render(players=players, dates={
+            'start': datetime.strptime(start_date, "%Y-%m-%d").strftime('%b. %d'),
+            'end': datetime.strptime(end_date, "%Y-%m-%d").strftime('%b. %d')
+        })
+        path = os.path.join(storage.filepath, "women", "top_lines", end_date)
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, f"{name}.html"), "w") as f:
+            f.write(html_content)
+        
+        return MaterializeResult(
+            metadata={
+                "df": MetadataValue.md(df.to_markdown())
+            }
+        )
+    
+    return _asset
+
+all_tl = build_top_lines_html_table_women(exp=[0,1,2,3,4,5], name="all")
+
+def build_season_rankings_report_women(exp: list[int], name: str="report") -> AssetsDefinition:
+    @asset(
+        name=f"season_rankings_report_for_{name}_women",
+        deps=["stage_top_lines_women", "stage_players_women", "stage_teams_women"],
+        config_schema={
+            "start_date": Field(String, is_required=True),
+            "end_date": Field(String, is_required=True),
+            "top_n": Field(Int, default_value=50, is_required=False)
+        },
+        group_name=RANKINGS_WOMEN,
+        compute_kind=PYTHON
+    )
+    def _asset(context: AssetExecutionContext, database: DuckDBResource, storage: LocalFileStorage, templates: JinjaTemplates) -> MaterializeResult:
+        """
+        create html report for newsletter
+        """
+        start_date = context.op_config['start_date']
+        end_date = context.op_config['end_date']
+        top_n = context.op_config['top_n']
+
+        with database.get_connection() as conn:
+            df = conn.execute(query=queries.prospect_rankings_report_query(
+                start_date=start_date,
+                end_date=end_date,
+                exp=exp,
+                top_n=top_n,
+                women=True
+            )).df()
+
+        # Set up Jinja2 environment to load templates from the current directory
+        env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
+        template = env.get_template("player_cards_template_season_rankings_women.html")
+
+        # Convert DataFrame to a list of dictionaries
+        players = df.to_dict(orient="records")
+
+        # Render the template with player data
+        html_content = template.render(players=players)
+        path = os.path.join(storage.filepath, "women", "rankings", end_date)
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, f"{name}.html"), "w") as f:
+            f.write(html_content)
+        
+        return MaterializeResult(
+            metadata={
+                "df": MetadataValue.md(df.to_markdown())
+            }
+        )
+    
+    return _asset
+
+prospect_rankings_report = build_season_rankings_report_women(exp=[0,1,2,3,4,5], name="all")

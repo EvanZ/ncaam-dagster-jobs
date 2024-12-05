@@ -303,7 +303,7 @@ def stage_players(context: AssetExecutionContext, database: DuckDBResource, stor
     else:
         all_rosters_paths = glob(os.path.join(storage.filepath, "women", "rosters", "*", "roster.json"))
 
-    drop_query = f"drop table if exists {'stage_women_players' if is_women else 'stage_players'};"
+    drop_query = f"drop table if exists {'stage_players_women' if is_women else 'stage_players'};"
     context.log.info(drop_query)
 
     create_query = queries.create_table_stage_players(is_women)
