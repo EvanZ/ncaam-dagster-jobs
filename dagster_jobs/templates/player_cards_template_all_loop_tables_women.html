@@ -169,8 +169,9 @@
                             <table style="width: fit-content;">
                                 <tbody>
                                     <tr>
+                                        <td style="background-color: hsla(60, 40%, 50%, 70%);">3.4&mu;</td>
                                         <td style="background-color: hsla(60, 80%, 50%, 70%);">7.4&mu;</td>
-                                        <td>is the season average ez game score</td>
+                                        <td>&nbsp;are the current game and season average ez game scores, respectively</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -221,7 +222,7 @@
         </div>
         <div class="grid-container">
             {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
-            {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.avg>3.0) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.ez>0) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
             <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('{{ player.team_logo}}');
@@ -243,7 +244,8 @@
                             <table>
                                 <tbody>
                                     <tr>
-                                        {% if player.games >= 7 %}
+                                        <td style="background-color: hsla(60, {{ player.ez_struct.ezpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.ez_struct.ez }}&mu;</td>
+                                         {% if player.games >= 7 %}
                                         <td style="background-color: hsla(60, {{ player.ez_struct.avgpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.ez_struct.avg }}&mu;</td>
                                         {% else %}
                                         <td style="background-color: hsla(60, {{ player.ez_struct.medpctile }}%, 50%, {{ TD_ALPHA }});">{{ player.ez_struct.med }}&mu;</td>
