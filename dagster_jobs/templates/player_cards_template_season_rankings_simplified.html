@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            color: rgb(63, 63, 63);
+        }
+        #toplines table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 0.25em;
+        }
+        #toplines th, #toplines td {
+            border: 1px solid lightgray;
+            text-align: center;
+            /* border-radius: 8px; */
+        }
+        #toplines th {
+            color: black;
+            font-weight: normal;
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            border: none;
+        }
+        #toplines td {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: darkslateblue;
+            padding: 0.25em;
+        }
+        #toplines h1 {
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        #toplines .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            width: 100vw;
+            gap: 1em;
+        }
+        #toplines .card {
+            border-radius: 1em;
+            box-shadow: 0 2px 4px lightgrey;
+            padding: 0em;
+        }
+        #toplines .high-rank {
+            border: solid 0.25em darkred;
+        }
+        #toplines .low-rank {
+            border: none;
+        }
+        #toplines .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: left;
+            }
+        #toplines .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        #toplines .class-rank {
+            position: relative;
+            margin-left: 0em;
+            color: black;
+            font-size: 2em;
+            font-weight: bold;
+        }
+        #toplines .player-name {
+            margin: 0;
+        }
+        #toplines .player-bio {
+            font-size: 1em;
+            text-align: center;
+        }
+        #toplines .game-info {
+            display: block;
+            text-align: center;
+            margin-top: 1em;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            /* */
+        }
+        #toplines .stats {
+            /* color: gray; */
+            margin-top: 0.5em;
+        }
+        #toplines .btn-link {
+            text-decoration: none;
+        }
+        #toplines .player-rank {
+            display: block;
+            font-size: 1.5em;
+            align-content:center;
+            color: gray;
+        }    
+        #toplines .player-row {
+            display: flex;
+            gap: 1em;
+        }
+        #toplines .shadow-headshot {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .missing-headshot {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(-0.5em -0.5em 0.5em darkgray);
+            /* Optional: Prevent surrounding div issues */
+            display: inline-block;
+        }
+        #toplines .team-logo {
+            width: 100px;
+            height: auto;
+            display: inline-block;
+        }
+        #toplines .value {
+            color: cornflowerblue;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        @media (max-width: 1600px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 1250px) {
+            #toplines .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1em;
+            }
+        }
+        @media (max-width: 750px) {
+            #toplines .grid-container {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set TD_ALPHA = "70%" %}
+    <div id="toplines">
+        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        <h1>
+            {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+        </h1>
+        <div class="grid-container">
+            {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
+            <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
+                style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
+                    url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
+                    background-size:contain; background-position: center;">
+                <div class="card-content">
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ loop.index }}
+                        </div>
+                        <div>
+                            <table style="margin-bottom: 0.5em;">
+                                <tr>
+                                    <td style="background-color: hsla(60, {{ player.ez_game_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.game_score | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_poss_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ ((75.0 * player.ez * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.score_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ (75.0*player.ez_struct.ez_scoring* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.def_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ (75.0*player.ez_struct.ez_defense* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.pass_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ (75.0*player.ez_struct.ez_passing* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.ez_struct.reb_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ (75.0*player.ez_struct.ez_rebounding* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>EZ</th>
+                                    <th>EZ75</th>
+                                    <th>Off</th>
+                                    <th>Def</th>
+                                    <th>Pass</th>
+                                    <th>Reb</th>
+                                </tr>
+                            </table>    
+                        </div>
+                    </div>
+                    <div class="card-header">
+                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                            <div class="player-bio">
+                                {% if player.headshot_href %}
+                                <img src={{ player.headshot_href }} class="shadow-headshot">
+                                {% else %}
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/7159c033-33ac-c6bb-45f4-a59c5117c6a1.png" class="missing-headshot">
+                                {% endif %}
+                                <br>
+                                #{{ player.jersey | int }}
+                                {{ player.display_name }}
+                            </div>    
+                        </a>
+                        <div class="player-bio">
+                            {{ player.display_height }} 
+                            {% if player.display_weight %}
+                            {{ player.display_weight }}
+                            {% endif %}
+                            <br>
+                            {{ player.experience_display_value }}&nbsp;{{ player.position_display_name }}
+                            <br>
+                            {% if player.state %}
+                            {{ player.city }}, {{ player.state }}
+                            {% else %}
+                            {{ player.city }}, {{ player.country }}
+                            {% endif %}  
+                            <br>  
+                            #{{ player.team_rank }} {{ player.team_location}} (#{{ player.sos }})
+                            <br>
+                            {{ player.team_conf }}
+                            {% if player.age_at_draft>0 %}
+                            <br>
+                            Age {{ (player.age_at_draft/365) | round(1) }}
+                            {% endif %}
+                            {% if player.recruit_rank>0 %}
+                            <br>
+                            #{{ player.recruit_rank | int}} RSCI
+                            {% endif %}
+                        </div>
+                    </div> 
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}    
+    </div>
+</body>
+</html>

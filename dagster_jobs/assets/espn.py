@@ -765,7 +765,8 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
         config_schema={
             "start_date": Field(String, is_required=True),
             "end_date": Field(String, is_required=True),
-            "top_n": Field(Int, default_value=50, is_required=False)
+            "top_n": Field(Int, default_value=50, is_required=False),
+            "simple": Field(Bool, default_value=False, is_required=False)
         },
         group_name=RANKINGS,
         compute_kind=PYTHON
@@ -777,6 +778,7 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
         start_date = context.op_config['start_date']
         end_date = context.op_config['end_date']
         top_n = context.op_config['top_n']
+        simplified = context.op_config['simple']
 
         with database.get_connection() as conn:
             df = conn.execute(query=queries.prospect_rankings_report_query(
@@ -788,13 +790,16 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-        template = env.get_template("player_cards_template_season_rankings.html")
-
+        template = env.get_template(f"player_cards_template_season_rankings{'_simplified' if simplified else ''}.html")
+        context.log.info(template)
         # Convert DataFrame to a list of dictionaries
         players = df.to_dict(orient="records")
 
         # Render the template with player data
-        html_content = template.render(players=players)
+        html_content = template.render(players=players, dates={
+            'start': datetime.strptime(start_date, "%Y-%m-%d").strftime('%b. %d'),
+            'end': datetime.strptime(end_date, "%Y-%m-%d").strftime('%b. %d')
+        })
         path = os.path.join(storage.filepath, "rankings", end_date)
         os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, f"{name}.html"), "w") as f:

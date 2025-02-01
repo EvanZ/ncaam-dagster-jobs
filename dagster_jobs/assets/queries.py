@@ -510,7 +510,8 @@ def insert_table_stage_player_lines(files: list[str], date: str, women: bool=Fal
             starter,
             jersey::TINYINT as jersey,
             struct_pack(
-                minutes := stats[1]::INT,
+                -- minutes := stats[1]::INT,
+                minutes := NULLIF(stats[1], '--')::INT,
                 fgm := regexp_extract(stats[2], '([0-9]+)-',1)::INT,
                 fga := regexp_extract(stats[2], '-([0-9]+)',1)::INT,
                 fg3m := regexp_extract(stats[3], '([0-9]+)-',1)::INT,
@@ -1320,7 +1321,8 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
     )
     select
         s.player_id,
-        {'RSCI' if not women else 'recruiting.rank'} as recruit_rank,
+        p.team_id,
+        {'RSCI' if not women else 'rsci.rank'} as recruit_rank,
         DATE '2025-06-25' - birthday::DATE as age_at_draft,
         display_name,
         location as team_location,
@@ -1344,6 +1346,8 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
         gs,
         gp,
         ez/gp as game_score,
+        100.0*(percent_rank() over (partition by experience_abbreviation order by
+            (minutes*team_poss/team_minutes) asc)) as posspctile,
         100.0*(percent_rank() over (partition by experience_abbreviation order by 
             (ez* team_minutes / (minutes * team_poss)) asc)) as ez_poss_pctile,
         100.0*(percent_rank() over (partition by experience_abbreviation order by 
@@ -1514,5 +1518,5 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
     join {'stage_teams_women' if women else 'stage_teams'} t on p.team_id=t.id
     join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tr on p.team_id=tr.team_id
     join sos on p.team_id=sos.team_id
-    order by class_rank asc;
+    order by ez_poss_pctile desc;
     """

@@ -147,12 +147,60 @@
 <body>
     {% set TD_ALPHA = "70%" %}
     <div id="toplines">
+        <div>
+            <h1>
+                Top Lines Prospect Rankings for {{ dates.start }} to {{ dates.end }}
+            </h1>
+            <div>
+                <h1>Notes</h1>
+                <h4>
+                    <ul>
+                        <li>EZ is my version of a game score. EZ75 is the same metric per 75 possessions. Players are ranked according to EZ75.</li>
+                        <li>EZ75 is further broken down into <b>OFF</b>ense, <b>DEF</b>ense, <b>PASS</b>ing and <b>REB</b>ounding metrics.</li>
+                        <li>Box score stats (pts, ast, etc) are given as per game averages.</li>
+                        <li>Age, if available, is given on Draft Night (June 25, 2025).</li>
+                        <li>Top 100 RSCI have red border.</li>
+                        <li>School ranking based on regression model.</li>
+                    </ul>        
+                </h4>
+            </div>
+            <div>
+                <h1>
+                    Color Legend
+                </h1>
+                <div>
+                    <h4>Colors represent percentiles for each stat. 
+                        Percentile calculations are within class and with respect to the dates of the report.
+                        Box score totals (pts, ast, etc) are normalized to 100 possessions for percentile calculations.
+                        Shot type percentiles (dunks, layups, etc) are the given for the ratio of the shot type to total fga. 
+                        So, for example, the color for the "fts" cell is equivalent to the standard definition of FTR (fta/fga).
+                    </h4>    
+                </div>
+                <div>
+                    <table>
+                        <tr>
+                            <!-- Cells with different background colors -->
+                            <td style="background-color: hsla(60, 0%, 50%, {{ TD_ALPHA }});">10%</td>
+                            <td style="background-color: hsla(60, 10%, 50%, {{ TD_ALPHA }});">20%</td>
+                            <td style="background-color: hsla(60, 20%, 50%, {{ TD_ALPHA }});">30%</td>
+                            <td style="background-color: hsla(60, 30%, 50%, {{ TD_ALPHA }});">40%</td>
+                            <td style="background-color: hsla(60, 40%, 50%, {{ TD_ALPHA }});">50%</td>
+                            <td style="background-color: hsla(60, 50%, 50%, {{ TD_ALPHA }});">60%</td>
+                            <td style="background-color: hsla(60, 60%, 50%, {{ TD_ALPHA }});">70%</td>
+                            <td style="background-color: hsla(60, 70%, 50%, {{ TD_ALPHA }});">80%</td>
+                            <td style="background-color: hsla(60, 80%, 50%, {{ TD_ALPHA }});">90%</td>
+                            <td style="background-color: hsla(60, 100%, 50%, {{ TD_ALPHA }});">100%</td>
+                        </tr>
+                    </table>        
+                </div>
+            </div>
+        </div>    
         {% for class in ['FR', 'SO', 'JR', 'SR'] %}
         <h1>
             {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
         </h1>
         <div class="grid-container">
-            {% for player in players if ((player.experience_abbreviation in class) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
             <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
@@ -160,7 +208,7 @@
                 <div class="card-content">
                     <div class="player-row">
                         <div class="class-rank">
-                            {{ player.class_rank }}
+                            {{ loop.index }}
                         </div>
                         <div>
                             <table style="margin-bottom: 0.5em;">
