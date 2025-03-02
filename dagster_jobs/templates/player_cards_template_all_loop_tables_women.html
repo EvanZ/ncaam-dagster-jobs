@@ -388,7 +388,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% if player.stats.ast > 0 %}
+                                    {% if player.assists.layups or player.assists.dunks or player.assists.midrange or player.assists.threes %}
                                     <tr>
                                         <td>{{ player.assists.layups }}</td>
                                         <td>{{ player.assists.midrange }}</td>

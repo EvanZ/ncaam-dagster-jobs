@@ -1,9 +1,10 @@
 ops:
-  top_lines_html_table_for_all:
+  season_rankings_report_for_all:
     config:
       top_n: 5000
-      start_date: 2025-01-01
-      end_date: 2025-01-15
+      start_date: 2024-11-04
+      end_date: 2025-01-01
+      simple: false
 resources:
   database:
     config:

@@ -1,9 +1,9 @@
 ops:
-  top_lines_html_table_for_all:
+  top_lines_html_table_for_all_women:
     config:
       top_n: 5000
       start_date: 2025-01-01
-      end_date: 2025-01-15
+      end_date: 2025-01-01
 resources:
   database:
     config:
