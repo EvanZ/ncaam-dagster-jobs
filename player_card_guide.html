@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Card Guide - Season Rankings Explained</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.4;
+            font-size: 16px;
+        }
+        
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .guide-content {
+            padding: 20px;
+        }
+        
+        .player-card-demo {
+            background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ff6b6b" opacity="0.1"/></svg>');
+            border: 3px solid #ff6b6b;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .player-row {
+            display: flex;
+            gap: 0.8em;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .class-rank {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ff6b6b;
+            min-width: 70px;
+        }
+        
+        .ez-table {
+            border-collapse: collapse;
+            margin-bottom: 8px;
+        }
+        
+        .ez-table td, .ez-table th {
+            border: 1px solid lightgray;
+            text-align: center;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .ez-table td {
+            background-color: hsla(60, 70%, 50%, 0.7);
+            color: darkslateblue;
+        }
+        
+        .player-info {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .player-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .player-bio {
+            flex: 1;
+            font-size: 1.0em;
+            line-height: 1.3;
+        }
+        
+        .player-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .stats-tables {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .stats-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 1.0em;
+        }
+        
+        .stats-table th {
+            background: #f8f9fa;
+            padding: 10px 6px;
+            border: 1px solid #dee2e6;
+            font-weight: bold;
+            color: #495057;
+            font-size: 1.0em;
+        }
+        
+        .stats-table td {
+            padding: 10px 6px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: darkslateblue;
+            font-size: 1.0em;
+        }
+        
+        .color-demo {
+            background-color: hsla(60, 75%, 50%, 0.7) !important;
+        }
+        
+        .legend {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .legend h2 {
+            color: #ff6b6b;
+            margin-top: 0;
+            font-size: 1.6em;
+        }
+        
+        .legend p {
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        
+        .color-scale {
+            display: flex;
+            height: 45px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .color-scale div {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            font-size: 1.0em;
+        }
+        
+        .explanations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .explanation-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .explanation-card h3 {
+            color: #ff6b6b;
+            margin-top: 0;
+            font-size: 1.3em;
+        }
+        
+        .explanation-card p {
+            font-size: 1.0em;
+            margin: 8px 0;
+        }
+        
+        .fun-fact {
+            background: linear-gradient(45deg, #ffeaa7, #fab1a0);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            font-style: italic;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            font-size: 1.1em;
+        }
+        
+        .fun-fact::before {
+            content: "💡";
+            font-size: 1.8em;
+            display: block;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏀 Player Card Guide</h1>
+            <p>Your complete guide to understanding Season Rankings player cards</p>
+        </div>
+        
+        <div class="guide-content">
+            <div class="player-card-demo">
+                <div class="player-row">
+                    <div class="class-rank">7</div>
+                    <table class="ez-table">
+                        <tr>
+                            <td class="color-demo">18.2</td>
+                            <td class="color-demo">21.4</td>
+                            <td class="color-demo">8.1</td>
+                            <td class="color-demo">4.2</td>
+                            <td class="color-demo">6.8</td>
+                            <td class="color-demo">2.3</td>
+                        </tr>
+                        <tr>
+                            <th>EZ</th>
+                            <th>EZ75</th>
+                            <th>Off</th>
+                            <th>Def</th>
+                            <th>Pass</th>
+                            <th>Reb</th>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="player-info">
+                    <div class="player-image">🏀</div>
+                    <div class="player-bio">
+                        <div class="player-name">#23 Johnny Hoopstar</div>
+                        6'7" 210 lbs<br>
+                        Junior Guard<br>
+                        Chicago, IL<br>
+                        #15 State University (#42)<br>
+                        Big Ten Conference<br>
+                        Age 20.3<br>
+                        #25 RSCI<br>
+                        <strong style="color: goldenrod;">CAA Early Entrant</strong><br>
+                        <strong>Combine:</strong> 6'6.25" 195 lbs<br>
+                        6'10" ws 8'7" sr
+                    </div>
+                </div>
+                
+                <div class="stats-tables">
+                    <table class="stats-table">
+                        <tr>
+                            <th>gs</th><th>gp</th><th>mpg</th><th>ts%</th><th>usg%</th><th>ppp</th>
+                        </tr>
+                        <tr>
+                            <td>28</td><td>32</td><td class="color-demo">34</td><td class="color-demo">62</td><td class="color-demo">28</td><td class="color-demo">1.12</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>pts</th><th>ast</th><th>reb</th><th>stl</th><th>blk</th><th>tov</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">19.4</td><td class="color-demo">6.2</td><td class="color-demo">7.8</td><td class="color-demo">1.9</td><td class="color-demo">0.8</td><td class="color-demo">3.1</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>dnk</th><th>dnk%</th><th>lay</th><th>lay%</th><th>mid</th><th>mid%</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">12-15</td><td class="color-demo">80%</td><td class="color-demo">45-62</td><td class="color-demo">73%</td><td class="color-demo">8-18</td><td class="color-demo">44%</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>2pt</th><th>2p%</th><th>3pt</th><th>3p%</th><th>ft</th><th>ft%</th><th>ftr</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">65-95</td><td class="color-demo">68%</td><td class="color-demo">28-75</td><td class="color-demo">37%</td><td class="color-demo">42-52</td><td class="color-demo">81%</td><td class="color-demo">0.31</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>dnk ast%</th><th>lay ast%</th><th>mid ast%</th><th>3pt ast%</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">25%</td><td class="color-demo">60%</td><td class="color-demo">75%</td><td class="color-demo">85%</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>astr</th><th>ast%</th><th>tor</th><th>to%</th><th>atr</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">8.2</td><td class="color-demo">24.1</td><td class="color-demo">4.1</td><td class="color-demo">18.2</td><td class="color-demo">2.0</td>
+                        </tr>
+                    </table>
+                    
+                    <table class="stats-table">
+                        <tr>
+                            <th>dnk ast</th><th>dnk%</th><th>lay ast</th><th>lay%</th><th>mid ast</th><th>mid%</th><th>3pt ast</th><th>3pt%</th>
+                        </tr>
+                        <tr>
+                            <td class="color-demo">8</td><td class="color-demo">4.1%</td><td class="color-demo">72</td><td class="color-demo">36.9%</td><td class="color-demo">45</td><td class="color-demo">23.1%</td><td class="color-demo">70</td><td class="color-demo">35.9%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h2>🎨 Color Legend</h2>
+                <p>All colored cells show <strong>percentiles within class</strong> (FR, SO, JR, SR). Higher percentiles = better performance = more yellow color.</p>
+                
+                <div class="color-scale">
+                    <div style="background-color: hsla(60, 10%, 50%, 0.7);">10%</div>
+                    <div style="background-color: hsla(60, 20%, 50%, 0.7);">20%</div>
+                    <div style="background-color: hsla(60, 30%, 50%, 0.7);">30%</div>
+                    <div style="background-color: hsla(60, 40%, 50%, 0.7);">40%</div>
+                    <div style="background-color: hsla(60, 50%, 50%, 0.7);">50%</div>
+                    <div style="background-color: hsla(60, 60%, 50%, 0.7);">60%</div>
+                    <div style="background-color: hsla(60, 70%, 50%, 0.7);">70%</div>
+                    <div style="background-color: hsla(60, 80%, 50%, 0.7);">80%</div>
+                    <div style="background-color: hsla(60, 90%, 50%, 0.7);">90%</div>
+                    <div style="background-color: hsla(60, 100%, 50%, 0.7);">100%</div>
+                </div>
+            </div>
+            
+            <div class="fun-fact">
+                <strong>Fun Fact:</strong> The EZ metric is like a "game score" that captures overall impact. EZ75 normalizes it per 75 possessions, making it fair to compare players with different minutes!
+            </div>
+            
+            <div class="explanations">
+                <div class="explanation-card">
+                    <h3>🏆 Class Rank & Borders</h3>
+                    <p><strong>Red Border:</strong> Top 100 RSCI recruit</p>
+                    <p><strong>Gold Border:</strong> Early NBA draft entrant</p>
+                    <p><strong>Number:</strong> Rank within their class (FR/SO/JR/SR)</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>📊 EZ Metrics</h3>
+                    <p><strong>EZ:</strong> Overall game impact score</p>
+                    <p><strong>EZ75:</strong> Impact per 75 possessions</p>
+                    <p><strong>Off/Def/Pass/Reb:</strong> Component breakdowns</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>👤 Player Info</h3>
+                    <p><strong>Physical:</strong> Height, weight, combine measurements</p>
+                    <p><strong>Background:</strong> Hometown, recruiting rank, age on draft night</p>
+                    <p><strong>Team:</strong> School ranking and strength of schedule</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>⚡ Usage & Efficiency</h3>
+                    <p><strong>mpg:</strong> Minutes per game</p>
+                    <p><strong>ts%:</strong> True shooting percentage</p>
+                    <p><strong>usg%:</strong> Usage rate (% of team possessions used)</p>
+                    <p><strong>ppp:</strong> Points per possession</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>📈 Box Score Stats</h3>
+                    <p>Standard per-game averages: points, assists, rebounds, steals, blocks, turnovers</p>
+                    <p><em>All percentiles calculated per 100 possessions for fair comparison</em></p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>🎯 Shot Breakdown</h3>
+                    <p><strong>dnk/lay/mid:</strong> Makes-attempts for each shot type</p>
+                    <p><strong>Percentages:</strong> Shooting efficiency by location</p>
+                    <p><strong>2pt/3pt/ft:</strong> Traditional shooting splits</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>🤝 Assisted Shots</h3>
+                    <p><strong>NEW!</strong> Shows what % of each shot type was assisted</p>
+                    <p><strong>High %:</strong> Catch-and-shoot specialist</p>
+                    <p><strong>Low %:</strong> Creates own shots</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>🎯 Passing & Ball Handling</h3>
+                    <p><strong>astr:</strong> Assist rate per 100 possessions</p>
+                    <p><strong>ast%:</strong> % of teammate makes assisted</p>
+                    <p><strong>tor/to%:</strong> Turnover rate and percentage</p>
+                    <p><strong>atr:</strong> Assist-to-turnover ratio</p>
+                </div>
+                
+                <div class="explanation-card">
+                    <h3>🏀 Assist Distribution</h3>
+                    <p>Shows HOW a player creates assists:</p>
+                    <p><strong>Counts:</strong> Assists to dunks, layups, mid-range, 3pts</p>
+                    <p><strong>Percentages:</strong> Distribution of assist types</p>
+                    <p><em>Only shown for players with 5+ shot assists</em></p>
+                </div>
+            </div>
+            
+            <div class="fun-fact">
+                <strong>Pro Tip:</strong> Look for players with high EZ75, good shooting percentages, and low turnover rates. These often translate to NBA success! 🌟
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
