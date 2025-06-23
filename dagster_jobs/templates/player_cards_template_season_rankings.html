@@ -179,6 +179,7 @@
                         Box score totals (pts, ast, etc) are normalized to 100 possessions for percentile calculations.
                         Shot type percentiles (dunks, layups, etc) are the given for the ratio of the shot type to total fga. 
                         So, for example, the color for the "fts" cell is equivalent to the standard definition of FTR (fta/fga).
+                        Assisted shot percentages show what percent of each shot type was assisted (e.g., "dnk ast%" = assisted dunks / total dunks).
                     </h4>    
                 </div>
                 <div>
@@ -423,6 +424,32 @@
                                     {{ player.shooting.ftr | round(2) }}
                                 </td>
                             </tr>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dnk ast%</th>
+                                    <th>lay ast%</th>
+                                    <th>mid ast%</th>
+                                    <th>3pt ast%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="background-color: hsla(60, {{ player.assisted_shots.dunk_ast_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assisted_shots.dunk_ast_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assisted_shots.layup_ast_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assisted_shots.layup_ast_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assisted_shots.mid_ast_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assisted_shots.mid_ast_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assisted_shots.three_ast_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assisted_shots.three_ast_pct }}%
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>                    
                         <table>
                             <thead>
@@ -474,14 +501,30 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>{{ player.assist_distribution.dunk_assists }}</td>
-                                    <td>{{ player.assist_distribution.dunk_pct }}%</td>
-                                    <td>{{ player.assist_distribution.layup_assists }}</td>
-                                    <td>{{ player.assist_distribution.layup_pct }}%</td>
-                                    <td>{{ player.assist_distribution.mid_assists }}</td>
-                                    <td>{{ player.assist_distribution.mid_pct }}%</td>
-                                    <td>{{ player.assist_distribution.three_assists }}</td>
-                                    <td>{{ player.assist_distribution.three_pct }}%</td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.dunk_assists_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.dunk_assists }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.dunk_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.dunk_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.layup_assists_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.layup_assists }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.layup_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.layup_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.mid_assists_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.mid_assists }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.mid_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.mid_pct }}%
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.three_assists_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.three_assists }}
+                                    </td>
+                                    <td style="background-color: hsla(60, {{ player.assist_distribution.three_pct_pctile }}%, 50%, {{ TD_ALPHA }});">
+                                        {{ player.assist_distribution.three_pct }}%
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

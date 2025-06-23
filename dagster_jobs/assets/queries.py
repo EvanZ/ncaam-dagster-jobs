@@ -1416,7 +1416,31 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
                 else 0.0 end,
             three_pct:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) > 0 
                 then round(100.0 * ast_to_3pt / (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt), 1) 
-                else 0.0 end
+                else 0.0 end,
+            dunk_assists_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast_to_dunk * team_minutes / (minutes * team_poss) asc)),
+            layup_assists_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast_to_layup * team_minutes / (minutes * team_poss) asc)),
+            mid_assists_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast_to_mid * team_minutes / (minutes * team_poss) asc)),
+            three_assists_pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
+                ast_to_3pt * team_minutes / (minutes * team_poss) asc)),
+            dunk_pct_pctile:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_to_dunk / nullif(ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt, 0) asc))
+                end,
+            layup_pct_pctile:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_to_layup / nullif(ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt, 0) asc))
+                end,
+            mid_pct_pctile:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_to_mid / nullif(ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt, 0) asc))
+                end,
+            three_pct_pctile:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_to_3pt / nullif(ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt, 0) asc))
+                end
         ) as assist_distribution,
         tov,
         tov/gp as tpg,
@@ -1498,6 +1522,36 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
             fg3a100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 fg3a * team_minutes / (minutes * team_poss) asc))
         ) as shooting,
+        struct_pack(
+            dunk_ast_pct:=case when (ast_dunk + unast_dunk) > 0 
+                then round(100.0 * ast_dunk / (ast_dunk + unast_dunk), 1) 
+                else 0.0 end,
+            layup_ast_pct:=case when (ast_layup + unast_layup) > 0 
+                then round(100.0 * ast_layup / (ast_layup + unast_layup), 1) 
+                else 0.0 end,
+            mid_ast_pct:=case when (ast_mid + unast_mid) > 0 
+                then round(100.0 * ast_mid / (ast_mid + unast_mid), 1) 
+                else 0.0 end,
+            three_ast_pct:=case when (ast_3pt + unast_3pt) > 0 
+                then round(100.0 * ast_3pt / (ast_3pt + unast_3pt), 1) 
+                else 0.0 end,
+            dunk_ast_pct_pctile:=case when (ast_dunk + unast_dunk) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_dunk / nullif(ast_dunk + unast_dunk, 0) asc))
+                end,
+            layup_ast_pct_pctile:=case when (ast_layup + unast_layup) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_layup / nullif(ast_layup + unast_layup, 0) asc))
+                end,
+            mid_ast_pct_pctile:=case when (ast_mid + unast_mid) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_mid / nullif(ast_mid + unast_mid, 0) asc))
+                end,
+            three_ast_pct_pctile:=case when (ast_3pt + unast_3pt) = 0 then 0
+                else 100.0*(percent_rank() over (partition by experience_abbreviation order by
+                    ast_3pt / nullif(ast_3pt + unast_3pt, 0) asc))
+                end
+        ) as assisted_shots,
         struct_pack(
             ast100:=round(cast(100.0 * ast * team_minutes / (minutes * team_poss) as numeric),1),
             ast100pctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
