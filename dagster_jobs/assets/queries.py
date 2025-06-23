@@ -1395,6 +1395,29 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
             fg2m
         ) as shots,
         ast,
+        ast_to_dunk,
+        ast_to_layup,
+        ast_to_mid,
+        ast_to_3pt,
+        struct_pack(
+            dunk_assists:=ast_to_dunk,
+            layup_assists:=ast_to_layup,
+            mid_assists:=ast_to_mid,
+            three_assists:=ast_to_3pt,
+            total_shot_assists:=ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt,
+            dunk_pct:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) > 0 
+                then round(100.0 * ast_to_dunk / (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt), 1) 
+                else 0.0 end,
+            layup_pct:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) > 0 
+                then round(100.0 * ast_to_layup / (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt), 1) 
+                else 0.0 end,
+            mid_pct:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) > 0 
+                then round(100.0 * ast_to_mid / (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt), 1) 
+                else 0.0 end,
+            three_pct:=case when (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt) > 0 
+                then round(100.0 * ast_to_3pt / (ast_to_dunk + ast_to_layup + ast_to_mid + ast_to_3pt), 1) 
+                else 0.0 end
+        ) as assist_distribution,
         tov,
         tov/gp as tpg,
         100.0*(percent_rank() over (partition by experience_abbreviation order by

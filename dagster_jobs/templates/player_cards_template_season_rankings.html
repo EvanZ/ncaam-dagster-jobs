@@ -457,7 +457,35 @@
                                     </td>
                                 </tr>
                             </tbody>
-                        </table>                   
+                        </table>
+                        {% if player.assist_distribution.total_shot_assists > 0 %}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dnk ast</th>
+                                    <th>dnk%</th>
+                                    <th>lay ast</th>
+                                    <th>lay%</th>
+                                    <th>mid ast</th>
+                                    <th>mid%</th>
+                                    <th>3pt ast</th>
+                                    <th>3pt%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ player.assist_distribution.dunk_assists }}</td>
+                                    <td>{{ player.assist_distribution.dunk_pct }}%</td>
+                                    <td>{{ player.assist_distribution.layup_assists }}</td>
+                                    <td>{{ player.assist_distribution.layup_pct }}%</td>
+                                    <td>{{ player.assist_distribution.mid_assists }}</td>
+                                    <td>{{ player.assist_distribution.mid_pct }}%</td>
+                                    <td>{{ player.assist_distribution.three_assists }}</td>
+                                    <td>{{ player.assist_distribution.three_pct }}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {% endif %}                   
                         <table>
                             <thead>
                                 <tr>
