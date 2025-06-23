@@ -290,6 +290,11 @@
                             <br>
                             <strong style="color: goldenrod;">{{ player.agency }} Early Entrant</strong>
                             {% endif %}
+                            {% if player.height_no_shoes or player.wingspan or player.standing_reach or player.weight_lbs %}
+                            <br>
+                            <strong>Combine:</strong>
+                            {% if player.height_no_shoes %}{{ player.height_no_shoes }}{% endif %}{% if player.weight_lbs %} {{ player.weight_lbs }} lbs{% endif %}{% if player.wingspan %}<br>{{ player.wingspan }} ws{% endif %}{% if player.standing_reach %} {{ player.standing_reach }} sr{% endif %}
+                            {% endif %}
                         </div>
                     </div> 
                     <div class="stats">

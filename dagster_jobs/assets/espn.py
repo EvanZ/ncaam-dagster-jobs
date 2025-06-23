@@ -388,6 +388,42 @@ def stage_prospect_birthdays(context: AssetExecutionContext, database: DuckDBRes
     )
 
 @asset(
+    group_name=SEASONAL,
+    compute_kind=DUCKDB,
+)
+def stage_combine_measurements(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
+    """
+    stage combine measurements from csv files
+    """
+    path = "data/raw/combine/2025.csv"
+    context.log.info(f"Loading combine data from: {path}")
+
+    with database.get_connection() as conn:
+        conn.execute("drop table if exists stage_combine_measurements;")
+        conn.execute(f"""
+                     create table stage_combine_measurements as (
+                     select
+                         PLAYER as player_name,
+                         "HEIGHT W/O SHOES" as height_no_shoes,
+                         "STANDING REACH" as standing_reach,
+                         "WEIGHT (LBS)" as weight_lbs,
+                         WINGSPAN as wingspan
+                     from read_csv('{path}', header=true)
+                     );
+                     """)
+        schema = conn.execute("describe stage_combine_measurements;").df()
+        df = conn.execute("select * from stage_combine_measurements;").df()
+        context.log.info(schema)
+    
+    return MaterializeResult(
+        metadata={
+            "schema": MetadataValue.md(schema.to_markdown()),
+            "count": MetadataValue.int(len(df)),
+            "sample": MetadataValue.md(df.sample(n=min(20, len(df))).to_markdown())
+        }
+    )
+
+@asset(
     group_name=DAILY,
     compute_kind=PYTHON,
     partitions_def=daily_partition,
@@ -761,7 +797,7 @@ all_tl = build_top_lines_html_table(exp=[0,1,2,3,4,5], name="all")
 def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDefinition:
     @asset(
         name=f"season_rankings_report_for_{name}",
-        deps=["stage_top_lines", "stage_players", "stage_teams"],
+        deps=["stage_top_lines", "stage_players", "stage_teams", "stage_combine_measurements"],
         config_schema={
             "start_date": Field(String, is_required=True),
             "end_date": Field(String, is_required=True),

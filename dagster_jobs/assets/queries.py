@@ -1343,6 +1343,10 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
         state,
         country,
         ee.agency,
+        combine.height_no_shoes,
+        combine.standing_reach,
+        combine.weight_lbs,
+        combine.wingspan,
         ez,
         gs,
         gp,
@@ -1517,6 +1521,7 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
     left join {'stage_rsci_rankings' if not women else 'stage_hoopgurlz_rankings'} rsci on p.full_name=rsci.{'Player' if not women else 'name'}
     left join stage_prospect_birthdays b on p.full_name=b.name
     left join (select name, agency from read_csv('data/raw/2025/early_entrants/data.csv')) ee on p.full_name=ee.name
+    left join stage_combine_measurements combine on p.full_name=combine.player_name
     join {'stage_teams_women' if women else 'stage_teams'} t on p.team_id=t.id
     join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tr on p.team_id=tr.team_id
     join sos on p.team_id=sos.team_id
