@@ -51,6 +51,10 @@
         #toplines .low-rank {
             border: none;
         }
+        #toplines .early-entrant {
+            border: 3px solid gold;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
         #toplines .card-content {
             display: flex;
             flex-direction: column;
@@ -153,7 +157,7 @@
         </h1>
         <div class="grid-container">
             {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
-            <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
+            <div class="card {% if player.agency %}early-entrant{% elif player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
                     background-size:contain; background-position: center;">

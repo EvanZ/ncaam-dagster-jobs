@@ -51,6 +51,10 @@
         #toplines .low-rank {
             border: none;
         }
+        #toplines .early-entrant {
+            border: 3px solid gold;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
         #toplines .card-content {
             display: flex;
             flex-direction: column;
@@ -160,6 +164,7 @@
                         <li>Box score stats (pts, ast, etc) are given as per game averages.</li>
                         <li>Age, if available, is given on Draft Night (June 25, 2025).</li>
                         <li>Top 100 RSCI have red border.</li>
+                        <li>Early entrants have gold border and show agency.</li>
                         <li>School ranking based on regression model.</li>
                     </ul>        
                 </h4>
@@ -200,8 +205,8 @@
             {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
         </h1>
         <div class="grid-container">
-            {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 75) or (player.recruit_rank>0))) %}
-            <div class="card {% if player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
+            {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 100) or (player.recruit_rank>0) or (player.agency) or (player.player_id in (4700852,4602025,4591259,4702656,4702745,4700818,4684208)) )) %}
+            <div class="card {% if player.agency %}early-entrant{% elif player.recruit_rank>0 %}high-rank{% else %}low-rank{% endif %}"
                 style="background: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), 
                     url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
                     background-size:contain; background-position: center;">
@@ -280,6 +285,10 @@
                             {% if player.recruit_rank>0 %}
                             <br>
                             #{{ player.recruit_rank | int}} RSCI
+                            {% endif %}
+                            {% if player.agency %}
+                            <br>
+                            <strong style="color: goldenrod;">{{ player.agency }} Early Entrant</strong>
                             {% endif %}
                         </div>
                     </div> 
