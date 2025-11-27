@@ -475,7 +475,7 @@ def create_table_stage_player_lines(women: bool=False) -> str:
             img_url STRING,
             starter BOOL,
             jersey TINYINT,
-            stats STRUCT("minutes" INTEGER, fgm INTEGER, fga INTEGER, fg3m INTEGER, fg3a INTEGER, ftm INTEGER, fta INTEGER, orb INTEGER, drb INTEGER, reb INTEGER, ast INTEGER, stl INTEGER, blk INTEGER, tov INTEGER, pf INTEGER, pts INTEGER),
+            stats STRUCT(pts INTEGER, fgm INTEGER, fga INTEGER, fg3m INTEGER, fg3a INTEGER, ftm INTEGER, fta INTEGER, reb INTEGER, ast INTEGER, tov INTEGER, stl INTEGER, blk INTEGER, orb INTEGER, drb INTEGER, pf INTEGER, "minutes" INTEGER),
             PRIMARY KEY (game_id, player_id)
         )
     """
@@ -509,24 +509,72 @@ def insert_table_stage_player_lines(files: list[str], date: str, women: bool=Fal
             href as img_url,
             starter,
             jersey::TINYINT as jersey,
+            -- Handle two different stats formats: standard (PTS first) vs alternative (MIN first)
             struct_pack(
-                -- minutes := stats[1]::INT,
-                minutes := NULLIF(stats[1], '--')::INT,
-                fgm := regexp_extract(stats[2], '([0-9]+)-',1)::INT,
-                fga := regexp_extract(stats[2], '-([0-9]+)',1)::INT,
-                fg3m := regexp_extract(stats[3], '([0-9]+)-',1)::INT,
-                fg3a := regexp_extract(stats[3], '-([0-9]+)',1)::INT,
-                ftm := regexp_extract(stats[4], '([0-9]+)-',1)::INT,
-                fta := regexp_extract(stats[4], '-([0-9]+)',1)::INT,
-                orb := stats[5]::INT,
-                drb := stats[6]::INT,
-                reb := stats[7]::INT, 
-                ast := stats[8]::INT,
-                stl := stats[9]::INT,
-                blk := stats[10]::INT,
-                tov := stats[11]::INT,
-                pf := stats[12]::INT,
-                pts := stats[13]::INT
+                minutes := case 
+                    when stat_format = 'alt' then NULLIF(stats[1], '--')::INT
+                    else NULLIF(stats[13], '--')::INT
+                end,
+                pts := case 
+                    when stat_format = 'alt' then stats[2]::INT
+                    else stats[1]::INT
+                end,
+                orb := case 
+                    when stat_format = 'alt' then stats[11]::INT
+                    else stats[10]::INT
+                end,
+                drb := case 
+                    when stat_format = 'alt' then stats[12]::INT
+                    else stats[11]::INT
+                end,
+                reb := case 
+                    when stat_format = 'alt' then stats[6]::INT
+                    else stats[5]::INT
+                end,
+                ast := case 
+                    when stat_format = 'alt' then stats[7]::INT
+                    else stats[6]::INT
+                end,
+                stl := case 
+                    when stat_format = 'alt' then stats[9]::INT
+                    else stats[8]::INT
+                end,
+                blk := case 
+                    when stat_format = 'alt' then stats[10]::INT
+                    else stats[9]::INT
+                end,
+                tov := case 
+                    when stat_format = 'alt' then stats[8]::INT
+                    else stats[7]::INT
+                end,
+                fgm := case 
+                    when stat_format = 'alt' then regexp_extract(stats[3], '([0-9]+)-',1)::INT
+                    else regexp_extract(stats[2], '([0-9]+)-',1)::INT
+                end,
+                fga := case 
+                    when stat_format = 'alt' then regexp_extract(stats[3], '-([0-9]+)',1)::INT
+                    else regexp_extract(stats[2], '-([0-9]+)',1)::INT
+                end,
+                fg3m := case 
+                    when stat_format = 'alt' then regexp_extract(stats[4], '([0-9]+)-',1)::INT
+                    else regexp_extract(stats[3], '([0-9]+)-',1)::INT
+                end,
+                fg3a := case 
+                    when stat_format = 'alt' then regexp_extract(stats[4], '-([0-9]+)',1)::INT
+                    else regexp_extract(stats[3], '-([0-9]+)',1)::INT
+                end,
+                ftm := case 
+                    when stat_format = 'alt' then regexp_extract(stats[5], '([0-9]+)-',1)::INT
+                    else regexp_extract(stats[4], '([0-9]+)-',1)::INT
+                end,
+                fta := case 
+                    when stat_format = 'alt' then regexp_extract(stats[5], '-([0-9]+)',1)::INT
+                    else regexp_extract(stats[4], '-([0-9]+)',1)::INT
+                end,
+                pf := case 
+                    when stat_format = 'alt' then stats[13]::INT
+                    else stats[12]::INT
+                end
             ) as stats
         from
         (select 
@@ -535,6 +583,8 @@ def insert_table_stage_player_lines(files: list[str], date: str, women: bool=Fal
             team_1_id,
             team_2_id,
             players.displayOrder,
+            -- Detect stats format: 'alt' if labels[1]='MIN', 'std' if labels[1]='PTS'
+            case when players.statistics[1].labels[1] = 'MIN' then 'alt' else 'std' end as stat_format,
             unnest(players.statistics[1].athletes, recursive:=true)
         from
         (
@@ -546,7 +596,7 @@ def insert_table_stage_player_lines(files: list[str], date: str, women: bool=Fal
                 unnest(boxscore['players']) as players 
         from read_json({files})
         ))
-        where stats[1] is not null
+        where didNotPlay is not true and stats[1] is not null
         returning player_id;
     """
 
@@ -671,13 +721,13 @@ def insert_table_stage_player_shots_by_game(date: str, women: bool=False) -> str
     count dunks, layups, mid-range and 3pt shots by player by game
     """
     return f"""
-    insert or ignore into {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'}
+    insert into {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'}
     select 
         game_id,
-        date,
-        team_id,
-        opp_id,
-        home,
+        any_value(date) as date,
+        any_value(team_id) as team_id,
+        any_value(opp_id) as opp_id,
+        any_value(home) as home,
         player_1_id as player_id,
         count(case when type_id=437 and shot.result='made' and assist is not null then 1 end) as ast_tip,
         count(case when type_id=437 and shot.result='made' and assist is null then 1 end) as unast_tip,
@@ -697,7 +747,7 @@ def insert_table_stage_player_shots_by_game(date: str, women: bool=False) -> str
     from {'stage_plays_women' if women else 'stage_plays'}
     where type_id in (437, 558, 572, 574) and
     date='{date}' and player_1_id is not null
-    group by ALL
+    group by game_id, player_1_id
     returning game_id, team_id, opp_id, home, player_id;
     """
 
@@ -1031,7 +1081,7 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         g.game_id,
         games,
         {"recruiting.rank" if women else "RSCI"} as recruit_rank,
-        DATE '2025-06-25' - birthday::DATE as age_at_draft,
+        DATE '2026-06-25' - birthday::DATE as age_at_draft,
         tr.rank as team_rank,
         tro.rank as opp_rank,
         case when home then team_2_logo else team_1_logo end as team_logo,
@@ -1323,7 +1373,7 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
         s.player_id,
         p.team_id,
         {'RSCI' if not women else 'rsci.rank'} as recruit_rank,
-        DATE '2025-06-25' - birthday::DATE as age_at_draft,
+        DATE '2026-06-25' - birthday::DATE as age_at_draft,
         display_name,
         location as team_location,
         color,
@@ -1343,10 +1393,10 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
         state,
         country,
         ee.agency,
-        combine.height_no_shoes,
-        combine.standing_reach,
-        combine.weight_lbs,
-        combine.wingspan,
+        -- combine.height_no_shoes,
+        --combine.standing_reach,
+        --combine.weight_lbs,
+        --combine.wingspan,
         ez,
         gs,
         gp,
@@ -1598,7 +1648,7 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
     left join {'stage_rsci_rankings' if not women else 'stage_hoopgurlz_rankings'} rsci on p.full_name=rsci.{'Player' if not women else 'name'}
     left join stage_prospect_birthdays b on p.full_name=b.name
     left join (select name, agency from read_csv('data/raw/2025/early_entrants/data.csv')) ee on p.full_name=ee.name
-    left join stage_combine_measurements combine on p.full_name=combine.player_name
+    -- left join stage_combine_measurements combine on p.full_name=combine.player_name
     join {'stage_teams_women' if women else 'stage_teams'} t on p.team_id=t.id
     join {'stage_team_ratings_women' if women else 'stage_team_ratings'} tr on p.team_id=tr.team_id
     join sos on p.team_id=sos.team_id

@@ -338,6 +338,38 @@ def stage_player_shots_by_game_women(context: AssetExecutionContext, database: D
             context.log.info(create_query)
             conn.execute(create_query)
 
+            # Delete existing records for this date to avoid duplicate key errors
+            delete_query = f"delete from stage_player_shots_by_game_women where date='{partition_date}';"
+            context.log.info(delete_query)
+            conn.execute(delete_query)
+
+            # Check for duplicates in the source query
+            dup_check_query = f"""
+            select 
+                game_id,
+                player_1_id as player_id,
+                count(*) as cnt
+            from (
+                select 
+                    game_id,
+                    date,
+                    team_id,
+                    opp_id,
+                    home,
+                    player_1_id
+                from stage_plays_women
+                where type_id in (437, 558, 572, 574) and
+                date='{partition_date}' and player_1_id is not null
+                group by game_id, date, team_id, opp_id, home, player_1_id
+            )
+            group by game_id, player_1_id
+            having count(*) > 1;
+            """
+            dup_df = conn.execute(dup_check_query).df()
+            if len(dup_df) > 0:
+                context.log.warning(f"Found {len(dup_df)} duplicate game_id/player_id combinations:")
+                context.log.warning(dup_df.to_string())
+
             insert_query = queries.insert_table_stage_player_shots_by_game(partition_date, women=True)
             context.log.info(insert_query)
             res = conn.execute(insert_query).fetchnumpy()

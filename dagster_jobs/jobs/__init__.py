@@ -5,10 +5,15 @@ from dagster import (
     job, config_from_files)
 from ..assets.constants import (
     DAILY, DAILY_WOMEN, MODELS, MODELS_WOMEN, TOP_LINES, 
-    TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN)
+    TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN, SEASONAL)
 from ..partitions import daily_partition
 from ..assets.ops import create_drop_table_op
 
+
+seasonal_update_job = define_asset_job(
+    name="seasonal_update",
+    selection=AssetSelection.groups(SEASONAL)
+)
 
 daily_update_job = define_asset_job(
     name="daily_update",

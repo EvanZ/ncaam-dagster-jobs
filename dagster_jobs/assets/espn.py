@@ -202,7 +202,7 @@ def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storag
         raise Exception("path/to/teams does not exist...aborting further materialization")
 
     create_drop_query = lambda women: f"""
-        drop table if exists {'stage_women_teams' if women else 'stage_teams'};
+        drop table if exists {'stage_teams_women' if women else 'stage_teams'};
     """
 
     drop_teams_query = create_drop_query(is_women)
@@ -249,7 +249,7 @@ def rosters_files(context: AssetExecutionContext, database: DuckDBResource, stor
 
     if not ids:
         with database.get_connection() as conn:
-            df = conn.execute(f"select id from {'stage_women_teams' if is_women else 'stage_teams'};").df()
+            df = conn.execute(f"select id from {'stage_teams_women' if is_women else 'stage_teams'};").df()
         ids = df['id']
 
     for id in ids:
@@ -372,7 +372,7 @@ def stage_prospect_birthdays(context: AssetExecutionContext, database: DuckDBRes
         conn.execute("drop table if exists stage_prospect_birthdays;")
         conn.execute(f"""
                      create table stage_prospect_birthdays as (
-                     from read_csv('{path}', header=true, filename=true)
+                     from read_csv('{path}', header=true, filename=true, nullstr=['N/A', ''])
                      );
                      """)
         schema = conn.execute("describe from stage_prospect_birthdays limit 1;").df()
@@ -612,7 +612,7 @@ def stage_player_lines(context: AssetExecutionContext, database: DuckDBResource,
         metadata={
             "num_lines_inserted": len(res['player_id']),
             "num_game_files": MetadataValue.int(len(files)),
-            "summary": MetadataValue.md(df[['game_id','date','player_id','name','stats']].to_markdown())
+            "summary": MetadataValue.md(df[['game_id','date','player_id','name','stats']].head(100).to_markdown())
         }
     )
 
@@ -656,6 +656,12 @@ def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBR
     with database.get_connection() as conn:
         context.log.info(queries.create_table_stage_player_shots_by_game())
         conn.execute(queries.create_table_stage_player_shots_by_game())
+        
+        # Delete existing records for this date to avoid duplicate key errors
+        delete_query = f"delete from stage_player_shots_by_game where date='{partition_date}';"
+        context.log.info(delete_query)
+        conn.execute(delete_query)
+        
         context.log.info(queries.insert_table_stage_player_shots_by_game(partition_date))
         res = conn.execute(queries.insert_table_stage_player_shots_by_game(partition_date)).fetchnumpy()
         df = conn.execute(f"from stage_player_shots_by_game where date='{partition_date}' limit 50;").df()
