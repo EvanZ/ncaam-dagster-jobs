@@ -7,7 +7,7 @@ from ..assets.constants import (
     DAILY, DAILY_WOMEN, MODELS, MODELS_WOMEN, TOP_LINES, 
     TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN, SEASONAL)
 from ..partitions import daily_partition
-from ..assets.ops import create_drop_table_op
+from ..assets.ops import create_drop_table_op, create_backup_table_op, create_restore_table_op
 
 
 seasonal_update_job = define_asset_job(
@@ -36,6 +36,19 @@ models_update_job_women = define_asset_job(
     name="models_update_women",
     selection=AssetSelection.groups(MODELS_WOMEN)
     )
+
+# Jobs that skip scraping and only process already-downloaded files
+daily_backfill_job = define_asset_job(
+    name="daily_backfill",
+    selection=AssetSelection.groups(DAILY) - AssetSelection.assets("daily_scoreboard_file", "game_summary_files"),
+    partitions_def=daily_partition,
+)
+
+daily_backfill_job_women = define_asset_job(
+    name="daily_backfill_women",
+    selection=AssetSelection.groups(DAILY_WOMEN) - AssetSelection.assets("daily_scoreboard_file_women", "game_summary_files_women"),
+    partitions_def=daily_partition,
+)
 
 run_config_top_lines = os.environ["CONFIG_PATH"]
 top_lines_job = define_asset_job(
@@ -73,6 +86,16 @@ drop_stage_player_shots_by_game = create_drop_table_op("stage_player_shots_by_ga
 drop_stage_player_assists_by_game = create_drop_table_op("stage_player_assists_by_game")
 drop_stage_rsci_rankings = create_drop_table_op("stage_rsci_rankings")
 drop_stage_shot_type_adjustment_factors = create_drop_table_op("stage_shot_type_adjustment_factors")
+drop_stage_box_stat_adjustment_factors_women = create_drop_table_op("stage_box_stat_adjustment_factors_women")
+drop_stage_shot_type_adjustment_factors_women = create_drop_table_op("stage_shot_type_adjustment_factors_women")
+backup_stage_box_stat_adjustment_factors = create_backup_table_op("stage_box_stat_adjustment_factors")
+backup_stage_shot_type_adjustment_factors = create_backup_table_op("stage_shot_type_adjustment_factors")
+backup_stage_box_stat_adjustment_factors_women = create_backup_table_op("stage_box_stat_adjustment_factors_women")
+backup_stage_shot_type_adjustment_factors_women = create_backup_table_op("stage_shot_type_adjustment_factors_women")
+restore_stage_box_stat_adjustment_factors = create_restore_table_op("stage_box_stat_adjustment_factors")
+restore_stage_shot_type_adjustment_factors = create_restore_table_op("stage_shot_type_adjustment_factors")
+restore_stage_box_stat_adjustment_factors_women = create_restore_table_op("stage_box_stat_adjustment_factors_women")
+restore_stage_shot_type_adjustment_factors_women = create_restore_table_op("stage_shot_type_adjustment_factors_women")
 drop_stage_teams = create_drop_table_op("stage_teams")
 drop_stage_top_lines = create_drop_table_op("stage_top_lines")
 drop_stage_players = create_drop_table_op("stage_players")
@@ -93,3 +116,24 @@ def cleanup_job():
     drop_stage_teams()
     drop_stage_top_lines()
     drop_stage_players()
+
+@job
+def backup_models_job():
+    backup_stage_box_stat_adjustment_factors()
+    backup_stage_shot_type_adjustment_factors()
+    backup_stage_box_stat_adjustment_factors_women()
+    backup_stage_shot_type_adjustment_factors_women()
+
+@job
+def cleanup_models_job():
+    drop_stage_box_stat_adjustment_factors()
+    drop_stage_shot_type_adjustment_factors()
+    drop_stage_box_stat_adjustment_factors_women()
+    drop_stage_shot_type_adjustment_factors_women()
+
+@job
+def restore_models_job():
+    restore_stage_box_stat_adjustment_factors()
+    restore_stage_shot_type_adjustment_factors()
+    restore_stage_box_stat_adjustment_factors_women()
+    restore_stage_shot_type_adjustment_factors_women()

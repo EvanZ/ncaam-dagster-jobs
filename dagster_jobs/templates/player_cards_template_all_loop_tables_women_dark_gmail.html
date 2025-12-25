@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards - Women</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        td { padding: 5px; }
+    </style>
+    <![endif]-->
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; background-color: #0a0e1a; color: #e8f0ff; margin: 0; padding: 20px; -webkit-font-smoothing: antialiased;">
+    {% set TD_ALPHA = "85%" %}
+    
+    <!-- Main container table for email compatibility -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 1200px; margin: 0 auto;">
+        <tr>
+            <td>
+                <!-- Header -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding-bottom: 20px;">
+                            <h1 style="font-family: Arial, Helvetica, sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #ff69b4; font-size: 28px; margin: 0 0 10px 0;">
+                                {% if dates.start==dates.end %}
+                                TOP LADIES // {{ dates.end }}
+                                {% else %}
+                                TOP LADIES // {{ dates.start }} → {{ dates.end }}
+                                {% endif %}
+                            </h1>
+                            <p style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #8899aa; margin: 0;">
+                                <a href="https://patreon.com/toplines?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" style="color: #ff69b4; text-decoration: none;">⚡ Support our Patreon</a> — $3/month for exclusive insights and full season rankings!
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Notes Section -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #111827; border: 1px solid #1e3a5f; border-radius: 8px; margin-bottom: 20px;">
+                    <tr>
+                        <td style="padding: 15px;">
+                            <h2 style="font-family: Arial, Helvetica, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #e8f0ff; font-size: 14px; margin: 0 0 10px 0;">System Notes</h2>
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr><td style="color: #8899aa; font-size: 11px; padding: 3px 0;"><span style="color: #ff69b4;">▸</span> Game rank shown as #X/Y (Xth best game out of Y played)</td></tr>
+                                <tr><td style="color: #8899aa; font-size: 11px; padding: 3px 0;"><span style="color: #ff69b4;">▸</span> <span style="color: #00ff88;">▲</span> = 1 std dev above avg &nbsp; <span style="color: #00ff88;">▲▲</span> = 2 std dev</td></tr>
+                                <tr><td style="color: #8899aa; font-size: 11px; padding: 3px 0;"><span style="color: #ff69b4;">▸</span> Unassisted makes shown as Xu (e.g., 3u = 3 unassisted)</td></tr>
+                                <tr><td style="color: #8899aa; font-size: 11px; padding: 3px 0;"><span style="color: #ff69b4;">▸</span> <span style="color: #c41e3a;">Red border</span> = HoopGurlz ranked player</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Color Legend -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #111827; border: 1px solid #1e3a5f; border-radius: 8px; margin-bottom: 20px;">
+                    <tr>
+                        <td style="padding: 15px;">
+                            <h2 style="font-family: Arial, Helvetica, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #e8f0ff; font-size: 14px; margin: 0 0 10px 0;">Color Legend</h2>
+                            <p style="color: #8899aa; font-size: 11px; margin: 0 0 10px 0;">Colors represent percentiles within class. Darker = lower, brighter gold = higher.</p>
+                            <table role="presentation" cellpadding="0" cellspacing="2" border="0" width="100%">
+                                <tr>
+                                    <td style="background-color: #3d3d3d; color: #8899aa; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">10%</td>
+                                    <td style="background-color: #4a4535; color: #8899aa; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">20%</td>
+                                    <td style="background-color: #574d2d; color: #e8f0ff; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">30%</td>
+                                    <td style="background-color: #645525; color: #e8f0ff; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">40%</td>
+                                    <td style="background-color: #7a6b1a; color: #e8f0ff; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">50%</td>
+                                    <td style="background-color: #9a850f; color: #0a0e1a; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">60%</td>
+                                    <td style="background-color: #b89c00; color: #0a0e1a; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">70%</td>
+                                    <td style="background-color: #d4b200; color: #0a0e1a; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">80%</td>
+                                    <td style="background-color: #e6c300; color: #0a0e1a; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">90%</td>
+                                    <td style="background-color: #ffd700; color: #0a0e1a; text-align: center; padding: 8px 4px; font-family: Courier New, monospace; font-size: 11px; border-radius: 3px;">100%</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                {% for class in ['SR', 'JR', 'SO', 'FR'] %}
+                <!-- Class Section Header -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid #1e3a5f;">
+                    <tr>
+                        <td style="padding-bottom: 10px;">
+                            <h2 style="font-family: Arial, Helvetica, sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #e8f0ff; font-size: 22px; margin: 0;">
+                                {% if class=='FR' %}FRESHMEN{% elif class=='SO' %}SOPHOMORES{% elif class=='JR' %}JUNIORS{% elif class=='SR' %}SENIORS{% endif %}
+                            </h2>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Player Cards - Fluid layout using inline-block for responsive stacking -->
+                <div style="font-size: 0; text-align: center;">
+                    {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
+                    
+                    {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.avgpctile > 70) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
+                    <!--[if mso]>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td width="340" valign="top">
+                    <![endif]-->
+                    <div style="display: inline-block; vertical-align: top; width: 100%; max-width: 330px; padding: 5px; box-sizing: border-box;">
+                        <!-- Player Card -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #111827; background-image: url('{{ player.team_logo }}'); background-size: 50%; background-position: center; background-repeat: no-repeat; border: {% if player.recruit_rank>0 %}2px solid #c41e3a{% else %}1px solid #1e3a5f{% endif %}; border-radius: 8px; {% if player.recruit_rank>0 %}box-shadow: 0 0 10px rgba(196, 30, 58, 0.3);{% endif %}">
+                                <!-- Red accent bar for HoopGurlz -->
+                                {% if player.recruit_rank>0 %}
+                                <tr>
+                                    <td style="background: linear-gradient(90deg, #c41e3a, #ff69b4); height: 3px; border-radius: 8px 8px 0 0;"></td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td style="padding: 12px; background-color: rgba(17, 24, 39, 0.92);">
+                                        <!-- Rank Row -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 10px;">
+                                            <tr>
+                                                <td width="60" style="font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 900; color: #ff69b4; text-align: center; vertical-align: middle;">
+                                                    {{ loop.index }}
+                                                    {% if player.notable in ['▲▲','▲'] %}
+                                                    <span style="font-size: 14px; color: #00ff88;">{{ player.notable }}</span>
+                                                    {% elif player.notable in ['▼▼','▼'] %}
+                                                    <span style="font-size: 14px; color: #ff3366;">{{ player.notable }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td width="70" style="font-family: Courier New, monospace; font-size: 14px; color: #556677; background-color: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; text-align: center;">
+                                                    #{{ player.game_rank }}/{{ player.games }}
+                                                </td>
+                                                <td style="padding-left: 10px;">
+                                                    <!-- EZ Scores -->
+                                                    <table role="presentation" cellpadding="0" cellspacing="2" border="0">
+                                                        <tr>
+                                                            {% set ez_pct = player.ez_struct.ezpctile %}
+                                                            {% set ez_bg = '#3d3d3d' if ez_pct < 20 else '#574d2d' if ez_pct < 40 else '#7a6b1a' if ez_pct < 60 else '#b89c00' if ez_pct < 80 else '#ffd700' %}
+                                                            {% set ez_color = '#8899aa' if ez_pct < 20 else '#e8f0ff' if ez_pct < 50 else '#0a0e1a' %}
+                                                            <td style="background-color: {{ ez_bg }}; color: {{ ez_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 14px; padding: 4px 8px; border-radius: 3px; text-align: center;">{{ player.ez_struct.ez }}</td>
+                                                            
+                                                            {% if player.games >= 7 %}
+                                                            {% set avg_pct = player.ez_struct.avgpctile %}
+                                                            {% set avg_bg = '#3d3d3d' if avg_pct < 20 else '#574d2d' if avg_pct < 40 else '#7a6b1a' if avg_pct < 60 else '#b89c00' if avg_pct < 80 else '#ffd700' %}
+                                                            {% set avg_color = '#8899aa' if avg_pct < 20 else '#e8f0ff' if avg_pct < 50 else '#0a0e1a' %}
+                                                            <td style="background-color: {{ avg_bg }}; color: {{ avg_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 14px; padding: 4px 8px; border-radius: 3px; text-align: center;">{{ player.ez_struct.avg }}</td>
+                                                            {% else %}
+                                                            {% set med_pct = player.ez_struct.medpctile %}
+                                                            {% set med_bg = '#3d3d3d' if med_pct < 20 else '#574d2d' if med_pct < 40 else '#7a6b1a' if med_pct < 60 else '#b89c00' if med_pct < 80 else '#ffd700' %}
+                                                            {% set med_color = '#8899aa' if med_pct < 20 else '#e8f0ff' if med_pct < 50 else '#0a0e1a' %}
+                                                            <td style="background-color: {{ med_bg }}; color: {{ med_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 14px; padding: 4px 8px; border-radius: 3px; text-align: center;">{{ player.ez_struct.med }}</td>
+                                                            {% endif %}
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Player Info Row -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 10px;">
+                                            <tr>
+                                                <td width="90" valign="top" style="text-align: center;">
+                                                    <a href="https://www.espn.com/womens-college-basketball/player/_/id/{{ player.player_id }}" style="text-decoration: none;">
+                                                        {% if player.headshot_href %}
+                                                        <img src="{{ player.headshot_href }}" width="70" height="70" style="border-radius: 50%; border: 2px solid #1e3a5f; display: block; margin: 0 auto;" alt="{{ player.display_name }}">
+                                                        {% else %}
+                                                        <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/a298273e-d4e2-500c-446f-fc1f44c0e4f4.png" width="70" height="70" style="border-radius: 50%; border: 2px solid #1e3a5f; display: block; margin: 0 auto;" alt="No photo">
+                                                        {% endif %}
+                                                        <p style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; color: #e8f0ff; margin: 5px 0 0 0;">
+                                                            <span style="color: #ff69b4;">#{{ player.jersey | int }}</span> {{ player.display_name }}
+                                                        </p>
+                                                    </a>
+                                                </td>
+                                                <td valign="top" style="padding-left: 10px; font-size: 12px; color: #8899aa; line-height: 1.5;">
+                                                    {{ player.display_height }}{% if player.display_weight %} / {{ player.display_weight }}{% endif %}<br>
+                                                    {{ player.experience_display_value }} {{ player.position_display_name }}<br>
+                                                    {% if player.state %}{{ player.city }}, {{ player.state }}{% else %}{{ player.city }}, {{ player.country }}{% endif %}<br>
+                                                    <span style="color: #ff69b4; font-weight: 600;">#{{ player.team_rank }} {{ player.team_location}} ({{ player.team_conf }})</span>
+                                                    {% if player.age_at_draft>0 %}<br>Age {{ (player.age_at_draft/365) | round(1) }}{% endif %}
+                                                    {% if player.recruit_rank>0 %}<br><span style="background: linear-gradient(135deg, #c41e3a, #ff69b4); color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 3px;">#{{ player.recruit_rank | int}} HoopGurlz</span>{% endif %}
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Game Info -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: rgba(0,0,0,0.3); border-radius: 6px; border-left: 3px solid #ff69b4; margin-bottom: 10px;">
+                                            <tr>
+                                                <td style="padding: 8px 10px; font-size: 12px; color: #8899aa; text-align: center;">
+                                                    {% if player.starter %}Started{% else %}Bench{% endif %} {{ player.minutes }}min
+                                                    {% if (player.team_pts-player.opp_pts) > 0 %}<span style="color: #00ff88;">W</span>{% else %}<span style="color: #ff3366;">L</span>{% endif %}
+                                                    {% if player.home %}vs{% else %}@{% endif %}
+                                                    <span style="color: #e8f0ff; font-weight: 600;">#{{player.opp_rank }} {{ player.opp_location }}</span>
+                                                    <a href="https://www.espn.com/womens-college-basketball/boxscore/_/gameId/{{ player.game_id }}" style="color: #ff69b4; text-decoration: none; font-weight: 600;">{{ player.team_pts }}-{{ player.opp_pts }}</a>
+                                                    ({{ player.date.strftime('%-m/%-d') }})
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Stats Tables -->
+                                        <!-- Box Score Stats -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="2" border="0" style="margin-bottom: 6px;">
+                                            <tr>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">pts</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">ast</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">tov</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">orb</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">drb</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">reb</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">stl</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">blk</th>
+                                            </tr>
+                                            <tr>
+                                                {% set pts_pct = player.percentiles.pts %}
+                                                {% set pts_bg = '#3d3d3d' if pts_pct < 20 else '#574d2d' if pts_pct < 40 else '#7a6b1a' if pts_pct < 60 else '#b89c00' if pts_pct < 80 else '#ffd700' %}
+                                                {% set pts_color = '#8899aa' if pts_pct < 20 else '#e8f0ff' if pts_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ pts_bg }}; color: {{ pts_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.pts }}</td>
+                                                
+                                                {% set ast_pct = player.percentiles.ast %}
+                                                {% set ast_bg = '#3d3d3d' if ast_pct < 20 else '#574d2d' if ast_pct < 40 else '#7a6b1a' if ast_pct < 60 else '#b89c00' if ast_pct < 80 else '#ffd700' %}
+                                                {% set ast_color = '#8899aa' if ast_pct < 20 else '#e8f0ff' if ast_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ ast_bg }}; color: {{ ast_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.ast }}</td>
+                                                
+                                                {% set tov_pct = player.percentiles.tov %}
+                                                {% set tov_bg = '#3d3d3d' if tov_pct < 20 else '#574d2d' if tov_pct < 40 else '#7a6b1a' if tov_pct < 60 else '#b89c00' if tov_pct < 80 else '#ffd700' %}
+                                                {% set tov_color = '#8899aa' if tov_pct < 20 else '#e8f0ff' if tov_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ tov_bg }}; color: {{ tov_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.tov }}</td>
+                                                
+                                                {% set orb_pct = player.percentiles.orb %}
+                                                {% set orb_bg = '#3d3d3d' if orb_pct < 20 else '#574d2d' if orb_pct < 40 else '#7a6b1a' if orb_pct < 60 else '#b89c00' if orb_pct < 80 else '#ffd700' %}
+                                                {% set orb_color = '#8899aa' if orb_pct < 20 else '#e8f0ff' if orb_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ orb_bg }}; color: {{ orb_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.orb }}</td>
+                                                
+                                                {% set drb_pct = player.percentiles.drb %}
+                                                {% set drb_bg = '#3d3d3d' if drb_pct < 20 else '#574d2d' if drb_pct < 40 else '#7a6b1a' if drb_pct < 60 else '#b89c00' if drb_pct < 80 else '#ffd700' %}
+                                                {% set drb_color = '#8899aa' if drb_pct < 20 else '#e8f0ff' if drb_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ drb_bg }}; color: {{ drb_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.drb }}</td>
+                                                
+                                                {% set reb_pct = player.percentiles.reb %}
+                                                {% set reb_bg = '#3d3d3d' if reb_pct < 20 else '#574d2d' if reb_pct < 40 else '#7a6b1a' if reb_pct < 60 else '#b89c00' if reb_pct < 80 else '#ffd700' %}
+                                                {% set reb_color = '#8899aa' if reb_pct < 20 else '#e8f0ff' if reb_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ reb_bg }}; color: {{ reb_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.orb + player.stats.drb }}</td>
+                                                
+                                                {% set stl_pct = player.percentiles.stl %}
+                                                {% set stl_bg = '#3d3d3d' if stl_pct < 20 else '#574d2d' if stl_pct < 40 else '#7a6b1a' if stl_pct < 60 else '#b89c00' if stl_pct < 80 else '#ffd700' %}
+                                                {% set stl_color = '#8899aa' if stl_pct < 20 else '#e8f0ff' if stl_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ stl_bg }}; color: {{ stl_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.stl }}</td>
+                                                
+                                                {% set blk_pct = player.percentiles.blk %}
+                                                {% set blk_bg = '#3d3d3d' if blk_pct < 20 else '#574d2d' if blk_pct < 40 else '#7a6b1a' if blk_pct < 60 else '#b89c00' if blk_pct < 80 else '#ffd700' %}
+                                                {% set blk_color = '#8899aa' if blk_pct < 20 else '#e8f0ff' if blk_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ blk_bg }}; color: {{ blk_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.stats.blk }}</td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Advanced Stats -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="2" border="0" style="margin-bottom: 6px;">
+                                            <tr>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">usg%</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">ts%</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">ppp</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">ast%</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">tov%</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">orb%</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">drb%</th>
+                                            </tr>
+                                            <tr>
+                                                {% set usg_pct = player.usg_struct.usgpctile %}
+                                                {% set usg_bg = '#3d3d3d' if usg_pct < 20 else '#574d2d' if usg_pct < 40 else '#7a6b1a' if usg_pct < 60 else '#b89c00' if usg_pct < 80 else '#ffd700' %}
+                                                {% set usg_color = '#8899aa' if usg_pct < 20 else '#e8f0ff' if usg_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ usg_bg }}; color: {{ usg_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.usg }}</td>
+                                                
+                                                {% set ts_pct = player.usg_struct.tspctile %}
+                                                {% set ts_bg = '#3d3d3d' if ts_pct < 20 else '#574d2d' if ts_pct < 40 else '#7a6b1a' if ts_pct < 60 else '#b89c00' if ts_pct < 80 else '#ffd700' %}
+                                                {% set ts_color = '#8899aa' if ts_pct < 20 else '#e8f0ff' if ts_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ ts_bg }}; color: {{ ts_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.ts }}</td>
+                                                
+                                                {% set ppp_pct = player.usg_struct.ppppctile %}
+                                                {% set ppp_bg = '#3d3d3d' if ppp_pct < 20 else '#574d2d' if ppp_pct < 40 else '#7a6b1a' if ppp_pct < 60 else '#b89c00' if ppp_pct < 80 else '#ffd700' %}
+                                                {% set ppp_color = '#8899aa' if ppp_pct < 20 else '#e8f0ff' if ppp_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ ppp_bg }}; color: {{ ppp_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.ppp }}</td>
+                                                
+                                                {% set astpct_pct = player.usg_struct.astpctpctile %}
+                                                {% set astpct_bg = '#3d3d3d' if astpct_pct < 20 else '#574d2d' if astpct_pct < 40 else '#7a6b1a' if astpct_pct < 60 else '#b89c00' if astpct_pct < 80 else '#ffd700' %}
+                                                {% set astpct_color = '#8899aa' if astpct_pct < 20 else '#e8f0ff' if astpct_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ astpct_bg }}; color: {{ astpct_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.astpct }}</td>
+                                                
+                                                {% set tovpct_pct = player.usg_struct.tovpctpctile %}
+                                                {% set tovpct_bg = '#3d3d3d' if tovpct_pct < 20 else '#574d2d' if tovpct_pct < 40 else '#7a6b1a' if tovpct_pct < 60 else '#b89c00' if tovpct_pct < 80 else '#ffd700' %}
+                                                {% set tovpct_color = '#8899aa' if tovpct_pct < 20 else '#e8f0ff' if tovpct_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ tovpct_bg }}; color: {{ tovpct_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.tovpct }}</td>
+                                                
+                                                {% set orbpct_pct = player.usg_struct.orbpctpctile %}
+                                                {% set orbpct_bg = '#3d3d3d' if orbpct_pct < 20 else '#574d2d' if orbpct_pct < 40 else '#7a6b1a' if orbpct_pct < 60 else '#b89c00' if orbpct_pct < 80 else '#ffd700' %}
+                                                {% set orbpct_color = '#8899aa' if orbpct_pct < 20 else '#e8f0ff' if orbpct_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ orbpct_bg }}; color: {{ orbpct_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.orbpct }}</td>
+                                                
+                                                {% set drbpct_pct = player.usg_struct.drbpctpctile %}
+                                                {% set drbpct_bg = '#3d3d3d' if drbpct_pct < 20 else '#574d2d' if drbpct_pct < 40 else '#7a6b1a' if drbpct_pct < 60 else '#b89c00' if drbpct_pct < 80 else '#ffd700' %}
+                                                {% set drbpct_color = '#8899aa' if drbpct_pct < 20 else '#e8f0ff' if drbpct_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ drbpct_bg }}; color: {{ drbpct_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.usg_struct.drbpct }}</td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Shot Types (no dunks for women) -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="2" border="0" style="margin-bottom: 6px;">
+                                            <tr>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">layup</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">mid</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">2pt</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">3pt</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">ft</th>
+                                            </tr>
+                                            <tr>
+                                                {% set lay_pct = player.shots_struct.layupspctile %}
+                                                {% set lay_bg = '#3d3d3d' if lay_pct < 20 else '#574d2d' if lay_pct < 40 else '#7a6b1a' if lay_pct < 60 else '#b89c00' if lay_pct < 80 else '#ffd700' %}
+                                                {% set lay_color = '#8899aa' if lay_pct < 20 else '#e8f0ff' if lay_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ lay_bg }}; color: {{ lay_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.shots_struct.layups }}</td>
+                                                
+                                                {% set mid_pct = player.shots_struct.midrangepctile %}
+                                                {% set mid_bg = '#3d3d3d' if mid_pct < 20 else '#574d2d' if mid_pct < 40 else '#7a6b1a' if mid_pct < 60 else '#b89c00' if mid_pct < 80 else '#ffd700' %}
+                                                {% set mid_color = '#8899aa' if mid_pct < 20 else '#e8f0ff' if mid_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ mid_bg }}; color: {{ mid_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.shots_struct.midrange }}</td>
+                                                
+                                                {% set twos_pct = player.shots_struct.twospctile %}
+                                                {% set twos_bg = '#3d3d3d' if twos_pct < 20 else '#574d2d' if twos_pct < 40 else '#7a6b1a' if twos_pct < 60 else '#b89c00' if twos_pct < 80 else '#ffd700' %}
+                                                {% set twos_color = '#8899aa' if twos_pct < 20 else '#e8f0ff' if twos_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ twos_bg }}; color: {{ twos_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.shots_struct.twos }}</td>
+                                                
+                                                {% set threes_pct = player.shots_struct.threespctile %}
+                                                {% set threes_bg = '#3d3d3d' if threes_pct < 20 else '#574d2d' if threes_pct < 40 else '#7a6b1a' if threes_pct < 60 else '#b89c00' if threes_pct < 80 else '#ffd700' %}
+                                                {% set threes_color = '#8899aa' if threes_pct < 20 else '#e8f0ff' if threes_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ threes_bg }}; color: {{ threes_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.shots_struct.threes }}</td>
+                                                
+                                                {% set ftr_pct = player.usg_struct.ftrpctile %}
+                                                {% set ftr_bg = '#3d3d3d' if ftr_pct < 20 else '#574d2d' if ftr_pct < 40 else '#7a6b1a' if ftr_pct < 60 else '#b89c00' if ftr_pct < 80 else '#ffd700' %}
+                                                {% set ftr_color = '#8899aa' if ftr_pct < 20 else '#e8f0ff' if ftr_pct < 50 else '#0a0e1a' %}
+                                                <td style="background-color: {{ ftr_bg }}; color: {{ ftr_color }}; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.shots_struct.fts }}</td>
+                                            </tr>
+                                        </table>
+
+                                        <!-- Assist Distribution (no dunks for women) -->
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="2" border="0">
+                                            <tr>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">lay ast</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">mid ast</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">2pt ast</th>
+                                                <th style="color: #556677; font-family: Courier New, monospace; font-size: 11px; text-transform: uppercase; padding: 2px; font-weight: 600;">3pt ast</th>
+                                            </tr>
+                                            <tr>
+                                                {% if player.assists.layups or player.assists.dunks or player.assists.midrange or player.assists.threes %}
+                                                <td style="background-color: #1e3a5f; color: #e8f0ff; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.assists.layups }}</td>
+                                                <td style="background-color: #1e3a5f; color: #e8f0ff; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.assists.midrange }}</td>
+                                                <td style="background-color: #1e3a5f; color: #e8f0ff; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.assists.layups + player.assists.dunks + player.assists.midrange }}</td>
+                                                <td style="background-color: #1e3a5f; color: #e8f0ff; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">{{ player.assists.threes }}</td>
+                                                {% else %}
+                                                <td style="background-color: #1e3a5f; color: #556677; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">0</td>
+                                                <td style="background-color: #1e3a5f; color: #556677; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">0</td>
+                                                <td style="background-color: #1e3a5f; color: #556677; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">0</td>
+                                                <td style="background-color: #1e3a5f; color: #556677; font-family: Courier New, monospace; font-weight: bold; font-size: 11px; padding: 4px 2px; border-radius: 3px; text-align: center;">0</td>
+                                                {% endif %}
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                    </div>
+                    <!--[if mso]>
+                    </td></tr></table>
+                    <![endif]-->
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+

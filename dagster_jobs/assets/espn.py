@@ -165,10 +165,11 @@ def stage_conferences(context: AssetExecutionContext, database: DuckDBResource, 
     insert_query = queries.insert_table_stage_conferences(path, is_women)
     context.log.info(insert_query)
 
-    with database.get_connection() as conn:
-        conn.execute(drop_confs_query)
-        conn.execute(create_table_query)
-        df = conn.execute(insert_query).df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute(drop_confs_query)
+            conn.execute(create_table_query)
+            df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -214,10 +215,11 @@ def stage_teams(context: AssetExecutionContext, database: DuckDBResource, storag
     insert_query = queries.insert_table_stage_teams(path, is_women)
     context.log.info(insert_query)
 
-    with database.get_connection() as conn:
-        conn.execute(drop_teams_query)
-        conn.execute(create_table_query)
-        df = conn.execute(insert_query).df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute(drop_teams_query)
+            conn.execute(create_table_query)
+            df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -312,10 +314,11 @@ def stage_players(context: AssetExecutionContext, database: DuckDBResource, stor
     insert_query = queries.insert_table_stage_players(all_rosters_paths, is_women)
     context.log.info(insert_query)
 
-    with database.get_connection() as conn:
-        conn.execute(drop_query)
-        conn.execute(create_query)
-        df = conn.execute(insert_query).df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute(drop_query)
+            conn.execute(create_query)
+            df = conn.execute(insert_query).df()
 
     return MaterializeResult(
         metadata={
@@ -338,16 +341,17 @@ def stage_rsci_rankings(context: AssetExecutionContext, database: DuckDBResource
     path = os.path.join(context.op_config["path"], "*.csv")
     context.log.info(path)
 
-    with database.get_connection() as conn:
-        conn.execute("drop table if exists stage_rsci_rankings;")
-        conn.execute(f"""
-                     create table stage_rsci_rankings as (
-                     from read_csv('{path}', header=true, filename=true)
-                     );
-                     """)
-        schema = conn.execute("describe from stage_rsci_rankings limit 1;").df()
-        df = conn.execute("from stage_rsci_rankings;").df()
-        context.log.info(schema)
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute("drop table if exists stage_rsci_rankings;")
+            conn.execute(f"""
+                        create table stage_rsci_rankings as (
+                        from read_csv('{path}', header=true, filename=true)
+                        );
+                        """)
+            schema = conn.execute("describe from stage_rsci_rankings limit 1;").df()
+            df = conn.execute("from stage_rsci_rankings;").df()
+            context.log.info(schema)
     
     return MaterializeResult(
         metadata={
@@ -368,16 +372,17 @@ def stage_prospect_birthdays(context: AssetExecutionContext, database: DuckDBRes
     path = os.path.join(os.environ['BIRTHDAY_PATH'], "*.csv")
     context.log.info(path)
 
-    with database.get_connection() as conn:
-        conn.execute("drop table if exists stage_prospect_birthdays;")
-        conn.execute(f"""
-                     create table stage_prospect_birthdays as (
-                     from read_csv('{path}', header=true, filename=true, nullstr=['N/A', ''])
-                     );
-                     """)
-        schema = conn.execute("describe from stage_prospect_birthdays limit 1;").df()
-        df = conn.execute("from stage_prospect_birthdays;").df()
-        context.log.info(schema)
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute("drop table if exists stage_prospect_birthdays;")
+            conn.execute(f"""
+                        create table stage_prospect_birthdays as (
+                        from read_csv('{path}', header=true, filename=true, nullstr=['N/A', ''])
+                        );
+                        """)
+            schema = conn.execute("describe from stage_prospect_birthdays limit 1;").df()
+            df = conn.execute("from stage_prospect_birthdays;").df()
+            context.log.info(schema)
     
     return MaterializeResult(
         metadata={
@@ -398,22 +403,23 @@ def stage_combine_measurements(context: AssetExecutionContext, database: DuckDBR
     path = "data/raw/combine/2025.csv"
     context.log.info(f"Loading combine data from: {path}")
 
-    with database.get_connection() as conn:
-        conn.execute("drop table if exists stage_combine_measurements;")
-        conn.execute(f"""
-                     create table stage_combine_measurements as (
-                     select
-                         PLAYER as player_name,
-                         "HEIGHT W/O SHOES" as height_no_shoes,
-                         "STANDING REACH" as standing_reach,
-                         "WEIGHT (LBS)" as weight_lbs,
-                         WINGSPAN as wingspan
-                     from read_csv('{path}', header=true)
-                     );
-                     """)
-        schema = conn.execute("describe stage_combine_measurements;").df()
-        df = conn.execute("select * from stage_combine_measurements;").df()
-        context.log.info(schema)
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            conn.execute("drop table if exists stage_combine_measurements;")
+            conn.execute(f"""
+                        create table stage_combine_measurements as (
+                        select
+                            PLAYER as player_name,
+                            "HEIGHT W/O SHOES" as height_no_shoes,
+                            "STANDING REACH" as standing_reach,
+                            "WEIGHT (LBS)" as weight_lbs,
+                            WINGSPAN as wingspan
+                        from read_csv('{path}', header=true)
+                        );
+                        """)
+            schema = conn.execute("describe stage_combine_measurements;").df()
+            df = conn.execute("select * from stage_combine_measurements;").df()
+            context.log.info(schema)
     
     return MaterializeResult(
         metadata={
@@ -632,6 +638,12 @@ def stage_plays(context: AssetExecutionContext, database: DuckDBResource, storag
     with fasteners.InterProcessLock('/tmp/duckdb.lock'):
         with database.get_connection() as conn:
             conn.execute(queries.create_table_stage_plays())
+            
+            # Delete existing records for this date to allow re-processing with updated regex
+            delete_query = f"DELETE FROM stage_plays WHERE date = '{partition_date}';"
+            context.log.info(delete_query)
+            conn.execute(delete_query)
+            
             context.log.info(queries.insert_table_stage_plays(files, partition_date))
             res = conn.execute(queries.insert_table_stage_plays(files, partition_date)).fetchnumpy()
             df = conn.execute(f"from stage_plays where date='{partition_date}' using sample reservoir(5%);").df()
@@ -653,18 +665,19 @@ def stage_plays(context: AssetExecutionContext, database: DuckDBResource, storag
 def stage_player_shots_by_game(context: AssetExecutionContext, database: DuckDBResource) -> MaterializeResult:
     partition_date = context.partition_key
 
-    with database.get_connection() as conn:
-        context.log.info(queries.create_table_stage_player_shots_by_game())
-        conn.execute(queries.create_table_stage_player_shots_by_game())
-        
-        # Delete existing records for this date to avoid duplicate key errors
-        delete_query = f"delete from stage_player_shots_by_game where date='{partition_date}';"
-        context.log.info(delete_query)
-        conn.execute(delete_query)
-        
-        context.log.info(queries.insert_table_stage_player_shots_by_game(partition_date))
-        res = conn.execute(queries.insert_table_stage_player_shots_by_game(partition_date)).fetchnumpy()
-        df = conn.execute(f"from stage_player_shots_by_game where date='{partition_date}' limit 50;").df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            context.log.info(queries.create_table_stage_player_shots_by_game())
+            conn.execute(queries.create_table_stage_player_shots_by_game())
+            
+            # Delete existing records for this date to avoid duplicate key errors
+            delete_query = f"delete from stage_player_shots_by_game where date='{partition_date}';"
+            context.log.info(delete_query)
+            conn.execute(delete_query)
+            
+            context.log.info(queries.insert_table_stage_player_shots_by_game(partition_date))
+            res = conn.execute(queries.insert_table_stage_player_shots_by_game(partition_date)).fetchnumpy()
+            df = conn.execute(f"from stage_player_shots_by_game where date='{partition_date}' limit 50;").df()
 
     return MaterializeResult(
         metadata={
@@ -684,10 +697,17 @@ def stage_player_assists_by_game(context: AssetExecutionContext, database: DuckD
     sql_query = queries.stage_player_assists_by_game(date)
     context.log.info(sql_query)
 
-    with database.get_connection() as conn:
-        context.log.info(queries.create_table_stage_player_assists_by_game())
-        conn.execute(queries.create_table_stage_player_assists_by_game())
-        df = conn.execute(sql_query).df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            context.log.info(queries.create_table_stage_player_assists_by_game())
+            conn.execute(queries.create_table_stage_player_assists_by_game())
+            
+            # Delete existing records for this date to avoid duplicate key errors
+            delete_query = f"delete from stage_player_assists_by_game where game_id in (select distinct game_id from stage_plays where date='{date}');"
+            context.log.info(delete_query)
+            conn.execute(delete_query)
+            
+            df = conn.execute(sql_query).df()
 
     return MaterializeResult(
         metadata={
@@ -717,11 +737,18 @@ def stage_top_lines(context: AssetExecutionContext, database: DuckDBResource) ->
 
     sql_query = queries.insert_table_stage_top_lines(date=partition_date)
 
-    with database.get_connection() as conn:
-        context.log.info(queries.create_table_stage_top_lines())
-        conn.execute(queries.create_table_stage_top_lines())
-        context.log.info(sql_query)
-        df = conn.execute(sql_query).df()
+    with fasteners.InterProcessLock('/tmp/duckdb.lock'):
+        with database.get_connection() as conn:
+            context.log.info(queries.create_table_stage_top_lines())
+            conn.execute(queries.create_table_stage_top_lines())
+            
+            # Delete existing records for this date to allow re-processing
+            delete_query = f"DELETE FROM stage_top_lines WHERE date = '{partition_date}';"
+            context.log.info(delete_query)
+            conn.execute(delete_query)
+            
+            context.log.info(sql_query)
+            df = conn.execute(sql_query).df()
 
     has_at_least_one_player = bool(len(df['player_id']) > 0)
 
@@ -772,7 +799,7 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-        player_card_template = env.get_template("player_cards_template_all_loop_tables.html")
+        player_card_template = env.get_template("player_cards_template_all_loop_tables_dark_gmail.html")
 
         # Convert DataFrame to a list of dictionaries
         players = df.to_dict(orient="records")
@@ -832,7 +859,7 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))
-        template = env.get_template(f"player_cards_template_season_rankings{'_simplified' if simplified else ''}.html")
+        template = env.get_template(f"player_cards_template_season_rankings{'_simplified' if simplified else ''}_dark.html")
         context.log.info(template)
         # Convert DataFrame to a list of dictionaries
         players = df.to_dict(orient="records")

@@ -510,70 +510,71 @@ def insert_table_stage_player_lines(files: list[str], date: str, women: bool=Fal
             starter,
             jersey::TINYINT as jersey,
             -- Handle two different stats formats: standard (PTS first) vs alternative (MIN first)
+            -- Using TRY_CAST to gracefully handle unexpected formats (returns NULL instead of error)
             struct_pack(
                 minutes := case 
-                    when stat_format = 'alt' then NULLIF(stats[1], '--')::INT
-                    else NULLIF(stats[13], '--')::INT
+                    when stat_format = 'alt' then TRY_CAST(NULLIF(stats[1], '--') AS INT)
+                    else TRY_CAST(NULLIF(stats[13], '--') AS INT)
                 end,
                 pts := case 
-                    when stat_format = 'alt' then stats[2]::INT
-                    else stats[1]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[2] AS INT)
+                    else TRY_CAST(stats[1] AS INT)
                 end,
                 orb := case 
-                    when stat_format = 'alt' then stats[11]::INT
-                    else stats[10]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[11] AS INT)
+                    else TRY_CAST(stats[10] AS INT)
                 end,
                 drb := case 
-                    when stat_format = 'alt' then stats[12]::INT
-                    else stats[11]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[12] AS INT)
+                    else TRY_CAST(stats[11] AS INT)
                 end,
                 reb := case 
-                    when stat_format = 'alt' then stats[6]::INT
-                    else stats[5]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[6] AS INT)
+                    else TRY_CAST(stats[5] AS INT)
                 end,
                 ast := case 
-                    when stat_format = 'alt' then stats[7]::INT
-                    else stats[6]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[7] AS INT)
+                    else TRY_CAST(stats[6] AS INT)
                 end,
                 stl := case 
-                    when stat_format = 'alt' then stats[9]::INT
-                    else stats[8]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[9] AS INT)
+                    else TRY_CAST(stats[8] AS INT)
                 end,
                 blk := case 
-                    when stat_format = 'alt' then stats[10]::INT
-                    else stats[9]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[10] AS INT)
+                    else TRY_CAST(stats[9] AS INT)
                 end,
                 tov := case 
-                    when stat_format = 'alt' then stats[8]::INT
-                    else stats[7]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[8] AS INT)
+                    else TRY_CAST(stats[7] AS INT)
                 end,
                 fgm := case 
-                    when stat_format = 'alt' then regexp_extract(stats[3], '([0-9]+)-',1)::INT
-                    else regexp_extract(stats[2], '([0-9]+)-',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[3], '([0-9]+)-',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[2], '([0-9]+)-',1) AS INT)
                 end,
                 fga := case 
-                    when stat_format = 'alt' then regexp_extract(stats[3], '-([0-9]+)',1)::INT
-                    else regexp_extract(stats[2], '-([0-9]+)',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[3], '-([0-9]+)',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[2], '-([0-9]+)',1) AS INT)
                 end,
                 fg3m := case 
-                    when stat_format = 'alt' then regexp_extract(stats[4], '([0-9]+)-',1)::INT
-                    else regexp_extract(stats[3], '([0-9]+)-',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[4], '([0-9]+)-',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[3], '([0-9]+)-',1) AS INT)
                 end,
                 fg3a := case 
-                    when stat_format = 'alt' then regexp_extract(stats[4], '-([0-9]+)',1)::INT
-                    else regexp_extract(stats[3], '-([0-9]+)',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[4], '-([0-9]+)',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[3], '-([0-9]+)',1) AS INT)
                 end,
                 ftm := case 
-                    when stat_format = 'alt' then regexp_extract(stats[5], '([0-9]+)-',1)::INT
-                    else regexp_extract(stats[4], '([0-9]+)-',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[5], '([0-9]+)-',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[4], '([0-9]+)-',1) AS INT)
                 end,
                 fta := case 
-                    when stat_format = 'alt' then regexp_extract(stats[5], '-([0-9]+)',1)::INT
-                    else regexp_extract(stats[4], '-([0-9]+)',1)::INT
+                    when stat_format = 'alt' then TRY_CAST(regexp_extract(stats[5], '-([0-9]+)',1) AS INT)
+                    else TRY_CAST(regexp_extract(stats[4], '-([0-9]+)',1) AS INT)
                 end,
                 pf := case 
-                    when stat_format = 'alt' then stats[13]::INT
-                    else stats[12]::INT
+                    when stat_format = 'alt' then TRY_CAST(stats[13] AS INT)
+                    else TRY_CAST(stats[12] AS INT)
                 end
             ) as stats
         from
@@ -658,8 +659,13 @@ def insert_table_stage_plays(files:list[str], date:str, women: bool=False) -> st
             type.id::INT as type_id,
             type.text as type_text,
             text,
-            regexp_extract(text,'(?P<player>[\W\w\s]+) (?P<result>missed|made) (?P<event>[\w\s]+).', ['player','result','event']) as shot,
-            nullif(regexp_extract(text, 'Assisted by ([\w\s\W]+).$', 1), '') as assist,
+            -- Handle both old format (missed/made + period) and new format (misses/makes, no period)
+            regexp_extract(text,'(?P<player>[\w\s\.\''-]+) (?P<result>missed|made|misses|makes) (?P<event>[\w\s-]+?)(?:\.|$| \()', ['player','result','event']) as shot,
+            -- Handle both old format (Assisted by X.) and new format (X assists)
+            coalesce(
+                nullif(regexp_extract(text, 'Assisted by ([\w\s\.\''-]+)\.$', 1), ''),
+                nullif(regexp_extract(text, '\(([^)]+) assists\)$', 1), '')
+            ) as assist,
             regexp_extract(text, '(?P<player>[\w\s\W]+) (?P<event>Offensive Rebound|Defensive Rebound|Turnover|Steal|Block).$', ['player', 'event']) as event,
             regexp_extract(text, '(?P<event>Foul) on (?P<player>[\w\s\W]+).$', ['event', 'player']) as foul,
             awayScore,
@@ -729,21 +735,23 @@ def insert_table_stage_player_shots_by_game(date: str, women: bool=False) -> str
         any_value(opp_id) as opp_id,
         any_value(home) as home,
         player_1_id as player_id,
-        count(case when type_id=437 and shot.result='made' and assist is not null then 1 end) as ast_tip,
-        count(case when type_id=437 and shot.result='made' and assist is null then 1 end) as unast_tip,
-        count(case when type_id=437 and shot.result='missed' then 1 end) as miss_tip,    
-        count(case when type_id=574 and shot.result='made' and assist is not null then 1 end) as ast_dunk,
-        count(case when type_id=574 and shot.result='made' and assist is null then 1 end) as unast_dunk,
-        count(case when type_id=574 and shot.result='missed' then 1 end) as miss_dunk,
-        count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_layup,
-        count(case when type_id=572 and shot.result='made' and assist is null then 1 end) as unast_layup,
-        count(case when type_id=572 and shot.result='missed' then 1 end) as miss_layup,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_mid,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is null then 1 end) as unast_mid,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='missed' then 1 end) as miss_mid,
-        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_3pt,
-        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is null then 1 end) as unast_3pt,
-        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='missed' then 1 end) as miss_3pt
+        -- Handle both old (made/missed) and new (makes/misses) formats
+        count(case when type_id=437 and shot.result in ('made','makes') and assist is not null then 1 end) as ast_tip,
+        count(case when type_id=437 and shot.result in ('made','makes') and assist is null then 1 end) as unast_tip,
+        count(case when type_id=437 and shot.result in ('missed','misses') then 1 end) as miss_tip,    
+        count(case when type_id=574 and shot.result in ('made','makes') and assist is not null then 1 end) as ast_dunk,
+        count(case when type_id=574 and shot.result in ('made','makes') and assist is null then 1 end) as unast_dunk,
+        count(case when type_id=574 and shot.result in ('missed','misses') then 1 end) as miss_dunk,
+        count(case when type_id=572 and shot.result in ('made','makes') and assist is not null then 1 end) as ast_layup,
+        count(case when type_id=572 and shot.result in ('made','makes') and assist is null then 1 end) as unast_layup,
+        count(case when type_id=572 and shot.result in ('missed','misses') then 1 end) as miss_layup,
+        -- Handle both old ('Jumper'/'Three Point Jumper') and new ('XX-foot jumper'/'XX-foot three point jumper') formats
+        count(case when type_id=558 and lower(shot.event) not like '%three point%' and shot.result in ('made','makes') and assist is not null then 1 end) as ast_mid,
+        count(case when type_id=558 and lower(shot.event) not like '%three point%' and shot.result in ('made','makes') and assist is null then 1 end) as unast_mid,
+        count(case when type_id=558 and lower(shot.event) not like '%three point%' and shot.result in ('missed','misses') then 1 end) as miss_mid,
+        count(case when type_id=558 and lower(shot.event) like '%three point%' and shot.result in ('made','makes') and assist is not null then 1 end) as ast_3pt,
+        count(case when type_id=558 and lower(shot.event) like '%three point%' and shot.result in ('made','makes') and assist is null then 1 end) as unast_3pt,
+        count(case when type_id=558 and lower(shot.event) like '%three point%' and shot.result in ('missed','misses') then 1 end) as miss_3pt
     from {'stage_plays_women' if women else 'stage_plays'}
     where type_id in (437, 558, 572, 574) and
     date='{date}' and player_1_id is not null
@@ -775,22 +783,24 @@ def stage_player_assists_by_game(date: str, women: bool=False) -> str:
     count different types of assists
     """
     return f"""
-    insert or ignore into {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'}
+    insert into {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'}
     select 
         game_id,
-        team_id,
-        opp_id,
-        home,
+        max(team_id) as team_id,
+        max(opp_id) as opp_id,
+        max(home) as home,
         player_2_id as player_id,
-        count(case when type_id=574 and shot.result='made' and assist is not null then 1 end) as ast_to_dunk,
-        count(case when type_id=572 and shot.result='made' and assist is not null then 1 end) as ast_to_layup,
-        count(case when type_id=558 and shot.event='Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_mid,
-        count(case when type_id=558 and shot.event='Three Point Jumper' and shot.result='made' and assist is not null then 1 end) as ast_to_3pt
+        -- Handle both old (made/missed) and new (makes/misses) formats
+        count(case when type_id=574 and shot.result in ('made','makes') and assist is not null then 1 end) as ast_to_dunk,
+        count(case when type_id=572 and shot.result in ('made','makes') and assist is not null then 1 end) as ast_to_layup,
+        -- Handle both old ('Jumper'/'Three Point Jumper') and new ('XX-foot jumper'/'XX-foot three point jumper') formats
+        count(case when type_id=558 and lower(shot.event) not like '%three point%' and shot.result in ('made','makes') and assist is not null then 1 end) as ast_to_mid,
+        count(case when type_id=558 and lower(shot.event) like '%three point%' and shot.result in ('made','makes') and assist is not null then 1 end) as ast_to_3pt
     from {'stage_plays_women' if women else 'stage_plays'}
     where type_id in (558, 572, 574) and
     date='{date}'
     and player_2_id is not null
-    group by ALL
+    group by game_id, player_2_id
     returning game_id, team_id, player_id, ast_to_dunk, ast_to_layup, ast_to_mid, ast_to_3pt;
     """
 

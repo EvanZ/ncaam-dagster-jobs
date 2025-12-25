@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Cards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2332;
+            --border-glow: #1e3a5f;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff3366;
+            --accent-green: #00ff88;
+            --text-primary: #e8f0ff;
+            --text-secondary: #8899aa;
+            --text-muted: #556677;
+            --stat-low: #2a3a4a;
+            --stat-high: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 51, 102, 0.03) 0%, transparent 50%);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2em;
+            min-height: 100vh;
+        }
+
+        #toplines {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        #toplines h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-primary);
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            margin-bottom: 0.5em;
+        }
+
+        #toplines h1.main-title {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #toplines h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        #toplines h2 a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        #toplines h2 a:hover {
+            border-bottom-color: var(--accent-cyan);
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        #toplines h4 {
+            color: var(--text-secondary);
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        #toplines ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        #toplines ul li {
+            position: relative;
+            padding-left: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        #toplines ul li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin: 2em 0 1em 0;
+            padding-bottom: 0.5em;
+            border-bottom: 2px solid var(--border-glow);
+        }
+
+        .section-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--border-glow), transparent);
+        }
+
+        #toplines table {
+            border-collapse: separate;
+            border-spacing: 2px;
+            width: 100%;
+            margin-bottom: 0.5em;
+        }
+
+        #toplines th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.3em 0.5em;
+            border: none;
+            background: transparent;
+        }
+
+        #toplines td {
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: 600;
+            color: var(--text-primary);
+            padding: 0.4em 0.5em;
+            text-align: center;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5em;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1em;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .high-rank {
+            border-color: var(--accent-gold) !important;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+        }
+
+        .high-rank::before {
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-red)) !important;
+            opacity: 1;
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75em;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75em;
+        }
+
+        .class-rank {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+            font-weight: 900;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+            min-width: 2em;
+            text-align: center;
+        }
+
+        .class-rank .notable-up {
+            font-size: 0.5em;
+            color: var(--accent-green);
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .class-rank .notable-down {
+            font-size: 0.5em;
+            color: var(--accent-red);
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+        }
+
+        .player-rank {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9em;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25em 0.5em;
+            border-radius: 4px;
+        }
+
+        .ez-scores td {
+            font-size: 1.1em;
+            padding: 0.3em 0.6em;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1em;
+        }
+
+        .card-header a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .player-bio {
+            text-align: center;
+        }
+
+        .shadow-headshot, .missing-headshot {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--border-glow);
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.2));
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .shadow-headshot,
+        .card:hover .missing-headshot {
+            border-color: var(--accent-cyan);
+            filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.4));
+        }
+
+        .player-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--text-primary);
+            margin-top: 0.5em;
+        }
+
+        .jersey-number {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        .player-details {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .player-details .team-info {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .rsci-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-gold), #ff8800);
+            color: var(--bg-dark);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 0.2em 0.5em;
+            border-radius: 4px;
+            margin-top: 0.25em;
+        }
+
+        .game-info {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 0.75em;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .game-info a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .game-info a:hover {
+            text-decoration: underline;
+        }
+
+        .game-info .opponent {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .stats {
+            margin-top: 0.5em;
+        }
+
+        /* Custom stat cell coloring - dark theme */
+        .stat-cell {
+            transition: all 0.2s ease;
+        }
+
+        .stat-cell:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+
+        /* Legend table styling */
+        .legend-table td {
+            padding: 0.5em 1em;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .notes-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1.5em;
+            margin-bottom: 2em;
+        }
+
+        .legend-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1.5em;
+            margin-bottom: 2em;
+        }
+
+        .color-legend-row {
+            display: flex;
+            gap: 2px;
+            margin-top: 1em;
+        }
+
+        .color-legend-row div {
+            flex: 1;
+            text-align: center;
+            padding: 0.5em;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85em;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 1600px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1250px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 750px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            
+            body {
+                padding: 1em;
+            }
+
+            #toplines h1.main-title {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set TD_ALPHA = "85%" %}
+    <div id="toplines">
+        <div>
+            <h1 class="main-title">
+                {% if dates.start==dates.end %}
+                Top Lines // {{ dates.end }}
+                {% else %}
+                Top Lines // {{ dates.start }} → {{ dates.end }}
+                {% endif %}
+            </h1>
+            <div>
+                <h2>
+                    <a href="https://patreon.com/toplines?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink">⚡ Support our Patreon</a> — $3/month for exclusive insights and full season rankings!
+                </h2>
+            </div>
+            
+            <div class="notes-section">
+                <h1 style="font-size: 1.2em; margin-top: 0;">System Notes</h1>
+                <h4>
+                    <ul>
+                        <li>Age calculated for Draft Night (June 2026)</li>
+                        <li>Game rank shown as #X/Y (Xth best game out of Y played)</li>
+                        <li>
+                            <table style="width: fit-content; margin: 0.5em 0;">
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(45, 40%, 40%, 85%); color: var(--text-primary);">3.4</td>
+                                        <td style="background-color: hsla(45, 80%, 45%, 85%); color: var(--bg-dark);">7.4</td>
+                                        <td style="background: transparent; border: none; color: var(--text-secondary); text-align: left; padding-left: 1em;">Current game / Season average EZ scores</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                       </li>
+                        <li><span style="color: var(--accent-green);">▲</span> = 1 std dev above avg &nbsp;&nbsp; <span style="color: var(--accent-green);">▲▲</span> = 2 std dev</li>
+                        <li>Unassisted makes shown as Xu (e.g., 3u = 3 unassisted)</li>
+                        <li>Gold border = Top 100 RSCI recruit</li>
+                        <li>School ranking based on regression model</li>
+                    </ul>        
+                </h4>
+            </div>
+
+            <div class="legend-section">
+                <h1 style="font-size: 1.2em; margin-top: 0;">Color Legend</h1>
+                <h4>
+                    Colors represent percentiles within class for the report period.
+                    Box score totals normalized to 100 possessions. Shot type percentiles based on ratio to total FGA.
+                </h4>
+                <div class="color-legend-row">
+                    <div style="background-color: hsla(45, 0%, 35%, {{ TD_ALPHA }}); color: #8899aa;">10%</div>
+                    <div style="background-color: hsla(45, 10%, 37%, {{ TD_ALPHA }}); color: #8899aa;">20%</div>
+                    <div style="background-color: hsla(45, 20%, 39%, {{ TD_ALPHA }}); color: #e8f0ff;">30%</div>
+                    <div style="background-color: hsla(45, 30%, 41%, {{ TD_ALPHA }}); color: #e8f0ff;">40%</div>
+                    <div style="background-color: hsla(45, 40%, 43%, {{ TD_ALPHA }}); color: #e8f0ff;">50%</div>
+                    <div style="background-color: hsla(45, 50%, 45%, {{ TD_ALPHA }}); color: #0a0e1a;">60%</div>
+                    <div style="background-color: hsla(45, 60%, 47%, {{ TD_ALPHA }}); color: #0a0e1a;">70%</div>
+                    <div style="background-color: hsla(45, 70%, 49%, {{ TD_ALPHA }}); color: #0a0e1a;">80%</div>
+                    <div style="background-color: hsla(45, 85%, 50%, {{ TD_ALPHA }}); color: #0a0e1a;">90%</div>
+                    <div style="background-color: hsla(45, 100%, 50%, {{ TD_ALPHA }}); color: #0a0e1a;">100%</div>
+                </div>
+            </div>
+        </div>
+
+        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        <div class="section-header">
+            <h1>
+                {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+            </h1>    
+        </div>
+        <div class="grid-container">
+            {% set max_ez = players | map(attribute='ez_struct.ez') | max %}
+            {% for player in players if ((player.experience_abbreviation in class) and (player.ez_struct.avgpctile > 75.0) and ((player.class_rank <= 25) or (player.recruit_rank>0))) %}
+            <div class="card {% if player.recruit_rank>0 %}high-rank{% endif %}"
+                style="background: linear-gradient(rgba(17, 24, 39, 0.92), rgba(17, 24, 39, 0.92)), 
+                    url('{{ player.team_logo}}');
+                    background-size: 60%; background-position: center; background-repeat: no-repeat;">
+                <div class="card-content">
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ loop.index }}
+                            {% if player.notable in ['▲▲','▲'] %}
+                            <span class="notable-up">{{ player.notable }}</span>
+                            {% elif player.notable in ['▼▼','▼'] %}
+                            <span class="notable-down">{{ player.notable }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="player-rank">
+                            #{{ player.game_rank }}/{{ player.games }}
+                        </div>
+                        <div class="ez-scores">
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td style="background-color: hsla(45, {{ player.ez_struct.ezpctile }}%, {{ 35 + player.ez_struct.ezpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.ezpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.ez_struct.ez }}</td>
+                                        {% if player.games >= 7 %}
+                                        <td style="background-color: hsla(45, {{ player.ez_struct.avgpctile }}%, {{ 35 + player.ez_struct.avgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.avgpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.ez_struct.avg }}</td>
+                                        {% else %}
+                                        <td style="background-color: hsla(45, {{ player.ez_struct.medpctile }}%, {{ 35 + player.ez_struct.medpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.medpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.ez_struct.med }}</td>
+                                        {% endif %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-header">
+                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                            <div class="player-bio">
+                                {% if player.headshot_href %}
+                                <img src="{{ player.headshot_href }}" class="shadow-headshot">
+                                {% else %}
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/7159c033-33ac-c6bb-45f4-a59c5117c6a1.png" class="missing-headshot">
+                                {% endif %}
+                                <div class="player-name">
+                                    <span class="jersey-number">#{{ player.jersey | int }}</span>
+                                    {{ player.display_name }}
+                                </div>
+                            </div>    
+                        </a>
+                        <div class="player-details">
+                            {{ player.display_height }} 
+                            {% if player.display_weight %}/ {{ player.display_weight }}{% endif %}
+                            <br>
+                            {{ player.experience_display_value }} {{ player.position_display_name }}
+                            <br>
+                            {% if player.state %}
+                            {{ player.city }}, {{ player.state }}
+                            {% else %}
+                            {{ player.city }}, {{ player.country }}
+                            {% endif %}  
+                            <br>
+                            <span class="team-info">#{{ player.team_rank }} {{ player.team_location}} ({{ player.team_conf }})</span>
+                            {% if player.age_at_draft>0 %}
+                            <br>
+                            Age {{ (player.age_at_draft/365) | round(1) }}
+                            {% endif %}
+                            {% if player.recruit_rank>0 %}
+                            <br>
+                            <span class="rsci-badge">#{{ player.recruit_rank | int}} RSCI</span>
+                            {% endif %}
+                        </div>
+                    </div> 
+                    <div class="game-info">
+                        {% if player.starter %}Started{% else %}Bench{% endif %} {{ player.minutes }}min
+                        {% if (player.team_pts-player.opp_pts) > 0 %}
+                        <span style="color: var(--accent-green);">W</span>
+                        {% else %}
+                        <span style="color: var(--accent-red);">L</span>
+                        {% endif %}
+                        {% if player.home %}vs{% else %}@{% endif %}
+                        <span class="opponent">#{{player.opp_rank }} {{ player.opp_location }}</span> 
+                        <a href="https://www.espn.com/mens-college-basketball/boxscore/_/gameId/{{ player.game_id }}">
+                            {{ player.team_pts }}-{{ player.opp_pts }}
+                        </a>
+                        ({{ player.date.strftime('%-m/%-d') }})
+                    </div> 
+                    <div class="stats">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>pts</th>
+                                    <th>ast</th>
+                                    <th>tov</th>
+                                    <th>orb</th>
+                                    <th>drb</th>
+                                    <th>reb</th>
+                                    <th>stl</th>
+                                    <th>blk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.pts }}%, {{ 35 + player.percentiles.pts * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.pts > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.pts }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.ast }}%, {{ 35 + player.percentiles.ast * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.ast > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.ast }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.tov }}%, {{ 35 + player.percentiles.tov * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.tov > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.tov }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.orb }}%, {{ 35 + player.percentiles.orb * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.orb > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.orb }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.drb }}%, {{ 35 + player.percentiles.drb * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.drb > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.drb }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.reb }}%, {{ 35 + player.percentiles.reb * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.reb > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.orb + player.stats.drb }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.stl }}%, {{ 35 + player.percentiles.stl * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.stl > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.stl }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.percentiles.blk }}%, {{ 35 + player.percentiles.blk * 0.15 }}%, {{ TD_ALPHA }}); {% if player.percentiles.blk > 50 %}color: var(--bg-dark);{% endif %}">{{ player.stats.blk }}</td>
+                                </tr>
+                            </tbody>
+                        </table>                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>usg%</th>
+                                    <th>ts%</th>
+                                    <th>ppp</th>
+                                    <th>ast%</th>
+                                    <th>tov%</th>
+                                    <th>orb%</th>
+                                    <th>drb%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.usgpctile }}%, {{ 35 + player.usg_struct.usgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.usgpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.usg }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.tspctile }}%, {{ 35 + player.usg_struct.tspctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.tspctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.ts }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.ppppctile }}%, {{ 35 + player.usg_struct.ppppctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.ppppctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.ppp }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.astpctpctile }}%, {{ 35 + player.usg_struct.astpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.astpctpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.astpct }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.tovpctpctile }}%, {{ 35 + player.usg_struct.tovpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.tovpctpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.tovpct }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.orbpctpctile }}%, {{ 35 + player.usg_struct.orbpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.orbpctpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.orbpct }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.drbpctpctile }}%, {{ 35 + player.usg_struct.drbpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.drbpctpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.usg_struct.drbpct }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dunk</th>
+                                    <th>layup</th>
+                                    <th>mid</th>
+                                    <th>2pt</th>
+                                    <th>3pt</th>
+                                    <th>ft</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.shots_struct.dunkspctile }}%, {{ 35 + player.shots_struct.dunkspctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shots_struct.dunkspctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.dunks }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.shots_struct.layupspctile }}%, {{ 35 + player.shots_struct.layupspctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shots_struct.layupspctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.layups }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.shots_struct.midrangepctile }}%, {{ 35 + player.shots_struct.midrangepctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shots_struct.midrangepctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.midrange }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.shots_struct.twospctile }}%, {{ 35 + player.shots_struct.twospctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shots_struct.twospctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.twos }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.shots_struct.threespctile }}%, {{ 35 + player.shots_struct.threespctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shots_struct.threespctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.threes }}</td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.usg_struct.ftrpctile }}%, {{ 35 + player.usg_struct.ftrpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.usg_struct.ftrpctile > 50 %}color: var(--bg-dark);{% endif %}">{{ player.shots_struct.fts }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dnk ast</th>
+                                    <th>lay ast</th>
+                                    <th>mid ast</th>
+                                    <th>2pt ast</th>
+                                    <th>3pt ast</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if player.assists.layups or player.assists.dunks or player.assists.midrange or player.assists.threes %}
+                                <tr>
+                                    <td>{{ player.assists.dunks }}</td>
+                                    <td>{{ player.assists.layups }}</td>
+                                    <td>{{ player.assists.midrange }}</td>
+                                    <td>{{ player.assists.layups + player.assists.dunks + player.assists.midrange }}</td>
+                                    <td>{{ player.assists.threes }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td style="color: var(--text-muted);">0</td>
+                                    <td style="color: var(--text-muted);">0</td>
+                                    <td style="color: var(--text-muted);">0</td>
+                                    <td style="color: var(--text-muted);">0</td>
+                                    <td style="color: var(--text-muted);">0</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>                        
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}    
+    </div>
+</body>
+</html>
+

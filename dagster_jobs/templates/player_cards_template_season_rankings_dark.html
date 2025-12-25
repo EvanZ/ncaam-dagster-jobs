@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Season Rankings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2332;
+            --border-glow: #1e3a5f;
+            --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700;
+            --accent-red: #ff3366;
+            --accent-green: #00ff88;
+            --text-primary: #e8f0ff;
+            --text-secondary: #8899aa;
+            --text-muted: #556677;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255, 51, 102, 0.03) 0%, transparent 50%);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2em;
+            min-height: 100vh;
+        }
+
+        #toplines {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        #toplines h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-primary);
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            margin-bottom: 0.5em;
+        }
+
+        #toplines h1.main-title {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #toplines h4 {
+            color: var(--text-secondary);
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        #toplines ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        #toplines ul li {
+            position: relative;
+            padding-left: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        #toplines ul li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin: 2em 0 1em 0;
+            padding-bottom: 0.5em;
+            border-bottom: 2px solid var(--border-glow);
+        }
+
+        .section-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--border-glow), transparent);
+        }
+
+        #toplines table {
+            border-collapse: separate;
+            border-spacing: 2px;
+            width: 100%;
+            margin-bottom: 0.25em;
+        }
+
+        #toplines th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.2em 0.3em;
+            border: none;
+            background: transparent;
+        }
+
+        #toplines td {
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: 600;
+            color: var(--text-primary);
+            padding: 0.3em 0.4em;
+            text-align: center;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9em;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5em;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1em;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .high-rank {
+            border-color: var(--accent-red) !important;
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.15);
+        }
+
+        .high-rank::before {
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-gold)) !important;
+            opacity: 1;
+        }
+
+        .early-entrant {
+            border-color: var(--accent-gold) !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+        }
+
+        .early-entrant::before {
+            background: linear-gradient(90deg, var(--accent-gold), #ff8800) !important;
+            opacity: 1;
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75em;
+        }
+
+        .class-rank {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+            font-weight: 900;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+            min-width: 1.5em;
+            text-align: center;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1em;
+        }
+
+        .card-header a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .player-bio {
+            text-align: center;
+        }
+
+        .shadow-headshot, .missing-headshot {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--border-glow);
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.2));
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .shadow-headshot,
+        .card:hover .missing-headshot {
+            border-color: var(--accent-cyan);
+            filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.4));
+        }
+
+        .player-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--text-primary);
+            margin-top: 0.5em;
+        }
+
+        .jersey-number {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-gold);
+            font-weight: 700;
+        }
+
+        .player-details {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .player-details .team-info {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .rsci-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-red), #ff6600);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 0.2em 0.5em;
+            border-radius: 4px;
+            margin-top: 0.25em;
+        }
+
+        .early-entrant-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-gold), #ff8800);
+            color: var(--bg-dark);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 0.2em 0.5em;
+            border-radius: 4px;
+            margin-top: 0.25em;
+        }
+
+        .combine-info {
+            font-size: 0.8em;
+            color: var(--accent-green);
+            margin-top: 0.25em;
+        }
+
+        .stats {
+            margin-top: 0.25em;
+        }
+
+        .stat-cell {
+            transition: all 0.2s ease;
+        }
+
+        .stat-cell:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+
+        .notes-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1.5em;
+            margin-bottom: 2em;
+        }
+
+        .legend-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1.5em;
+            margin-bottom: 2em;
+        }
+
+        .color-legend-row {
+            display: flex;
+            gap: 2px;
+            margin-top: 1em;
+        }
+
+        .color-legend-row div {
+            flex: 1;
+            text-align: center;
+            padding: 0.5em;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85em;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 1600px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1250px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 750px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            
+            body {
+                padding: 1em;
+            }
+
+            #toplines h1.main-title {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set TD_ALPHA = "85%" %}
+    <div id="toplines">
+        <div>
+            <h1 class="main-title">
+                Prospect Rankings // {{ dates.start }} → {{ dates.end }}
+            </h1>
+            
+            <div class="notes-section">
+                <h1 style="font-size: 1.2em; margin-top: 0;">System Notes</h1>
+                <h4>
+                    <ul>
+                        <li><strong>EZ</strong> is a custom game score metric. <strong>EZ75</strong> normalizes to 75 possessions. Rankings based on EZ75.</li>
+                        <li>EZ75 components: <strong>OFF</strong>ense, <strong>DEF</strong>ense, <strong>PASS</strong>ing, <strong>REB</strong>ounding</li>
+                        <li>Box score stats shown as per-game averages</li>
+                        <li>Age calculated for Draft Night (June 25, 2025)</li>
+                        <li><span style="color: var(--accent-red);">Red border</span> = Top 100 RSCI recruit</li>
+                        <li><span style="color: var(--accent-gold);">Gold border</span> = Early entrant (with agency)</li>
+                        <li>School ranking based on regression model</li>
+                    </ul>        
+                </h4>
+            </div>
+
+            <div class="legend-section">
+                <h1 style="font-size: 1.2em; margin-top: 0;">Color Legend</h1>
+                <h4>
+                    Percentiles within class for report period. Box scores normalized to 100 possessions.
+                    Shot type percentiles = ratio to total FGA. Assisted shot % = assisted makes / total makes.
+                </h4>
+                <div class="color-legend-row">
+                    <div style="background-color: hsla(45, 0%, 35%, {{ TD_ALPHA }}); color: #8899aa;">10%</div>
+                    <div style="background-color: hsla(45, 10%, 37%, {{ TD_ALPHA }}); color: #8899aa;">20%</div>
+                    <div style="background-color: hsla(45, 20%, 39%, {{ TD_ALPHA }}); color: #e8f0ff;">30%</div>
+                    <div style="background-color: hsla(45, 30%, 41%, {{ TD_ALPHA }}); color: #e8f0ff;">40%</div>
+                    <div style="background-color: hsla(45, 40%, 43%, {{ TD_ALPHA }}); color: #e8f0ff;">50%</div>
+                    <div style="background-color: hsla(45, 50%, 45%, {{ TD_ALPHA }}); color: #0a0e1a;">60%</div>
+                    <div style="background-color: hsla(45, 60%, 47%, {{ TD_ALPHA }}); color: #0a0e1a;">70%</div>
+                    <div style="background-color: hsla(45, 70%, 49%, {{ TD_ALPHA }}); color: #0a0e1a;">80%</div>
+                    <div style="background-color: hsla(45, 85%, 50%, {{ TD_ALPHA }}); color: #0a0e1a;">90%</div>
+                    <div style="background-color: hsla(45, 100%, 50%, {{ TD_ALPHA }}); color: #0a0e1a;">100%</div>
+                </div>
+            </div>
+        </div>    
+
+        {% for class in ['FR', 'SO', 'JR', 'SR'] %}
+        <div class="section-header">
+            <h1>
+                {% if class=='FR' %}Freshmen{% elif class=='SO' %}Sophomores{% elif class=='JR' %}Juniors{% elif class=='SR' %}Seniors{% endif %}
+            </h1>
+        </div>
+        <div class="grid-container">
+            {% for player in players if ((player.experience_abbreviation in class) and (player.posspctile > 50.0) and ((player.class_rank <= 100) or (player.recruit_rank>0) or (player.agency) or (player.player_id in (4700852,4602025,4591259,4702656,4702745,4700818,4684208,4903027)) )) %}
+            <div class="card {% if player.agency %}early-entrant{% elif player.recruit_rank>0 %}high-rank{% endif %}"
+                style="background: linear-gradient(rgba(17, 24, 39, 0.92), rgba(17, 24, 39, 0.92)), 
+                    url('https://a.espncdn.com/i/teamlogos/ncaa/500/{{ player.team_id }}.png');
+                    background-size: 60%; background-position: center; background-repeat: no-repeat;">
+                <div class="card-content">
+                    <div class="player-row">
+                        <div class="class-rank">
+                            {{ loop.index }}
+                        </div>
+                        <div>
+                            <table style="margin-bottom: 0.25em;">
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_game_pctile }}%, {{ 35 + player.ez_game_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_game_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.game_score | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_poss_pctile }}%, {{ 35 + player.ez_poss_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_poss_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ ((75.0 * player.ez * player.team_minutes) / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_struct.score_pctile }}%, {{ 35 + player.ez_struct.score_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.score_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ (75.0*player.ez_struct.ez_scoring* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_struct.def_pctile }}%, {{ 35 + player.ez_struct.def_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.def_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ (75.0*player.ez_struct.ez_defense* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_struct.pass_pctile }}%, {{ 35 + player.ez_struct.pass_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.pass_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ (75.0*player.ez_struct.ez_passing* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.ez_struct.reb_pctile }}%, {{ 35 + player.ez_struct.reb_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ez_struct.reb_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ (75.0*player.ez_struct.ez_rebounding* player.team_minutes / (player.minutes * player.team_poss)) | round(1) }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>EZ</th>
+                                    <th>EZ75</th>
+                                    <th>Off</th>
+                                    <th>Def</th>
+                                    <th>Pass</th>
+                                    <th>Reb</th>
+                                </tr>
+                            </table>    
+                        </div>
+                    </div>
+                    <div class="card-header">
+                        <a href="https://www.espn.com/mens-college-basketball/player/_/id/{{ player.player_id }}">
+                            <div class="player-bio">
+                                {% if player.headshot_href %}
+                                <img src="{{ player.headshot_href }}" class="shadow-headshot">
+                                {% else %}
+                                <img src="https://mcusercontent.com/c0f1d38448edcf64f2a3b8ea8/images/7159c033-33ac-c6bb-45f4-a59c5117c6a1.png" class="missing-headshot">
+                                {% endif %}
+                                <div class="player-name">
+                                    <span class="jersey-number">#{{ player.jersey | int }}</span>
+                                    {{ player.display_name }}
+                                </div>
+                            </div>    
+                        </a>
+                        <div class="player-details">
+                            {{ player.display_height }} 
+                            {% if player.display_weight %}/ {{ player.display_weight }}{% endif %}
+                            <br>
+                            {{ player.experience_display_value }} {{ player.position_display_name }}
+                            <br>
+                            {% if player.state %}
+                            {{ player.city }}, {{ player.state }}
+                            {% else %}
+                            {{ player.city }}, {{ player.country }}
+                            {% endif %}  
+                            <br>
+                            <span class="team-info">#{{ player.team_rank }} {{ player.team_location}} (SOS #{{ player.sos }})</span>
+                            <br>
+                            {{ player.team_conf }}
+                            {% if player.age_at_draft>0 %}
+                            <br>
+                            Age {{ (player.age_at_draft/365) | round(1) }}
+                            {% endif %}
+                            {% if player.recruit_rank>0 %}
+                            <br>
+                            <span class="rsci-badge">#{{ player.recruit_rank | int}} RSCI</span>
+                            {% endif %}
+                            {% if player.agency %}
+                            <br>
+                            <span class="early-entrant-badge">{{ player.agency }}</span>
+                            {% endif %}
+                            {% if player.height_no_shoes or player.wingspan or player.standing_reach or player.weight_lbs %}
+                            <div class="combine-info">
+                                <strong>Combine:</strong>
+                                {% if player.height_no_shoes %}{{ player.height_no_shoes }}{% endif %}{% if player.weight_lbs %} {{ player.weight_lbs }}lbs{% endif %}{% if player.wingspan %}<br>{{ player.wingspan }} ws{% endif %}{% if player.standing_reach %} {{ player.standing_reach }} sr{% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div> 
+                    <div class="stats">
+                        <table>
+                            <tr>
+                                <th>gs</th>
+                                <th>gp</th>
+                                <th>mpg</th>
+                                <th>ts%</th>
+                                <th>usg%</th>
+                                <th>ppp</th>
+                            </tr>
+                            <tr>
+                                <td>{{ player.gs | int }}</td>
+                                <td>{{ player.gp | int }}</td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.mpgpctile }}%, {{ 35 + player.mpgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.mpgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ (player.minutes / player.gp) | round | int }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.tspctile }}%, {{ 35 + player.shooting.tspctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.tspctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.ts | int }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.usgpctile }}%, {{ 35 + player.shooting.usgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.usgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.usg | int }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.ppppctile }}%, {{ 35 + player.shooting.ppppctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.ppppctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.ppp | round(2) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                              <th>pts</th>
+                              <th>ast</th>
+                              <th>reb</th>
+                              <th>stl</th>
+                              <th>blk</th>
+                              <th>tov</th>
+                            </tr>
+                            <tr>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.ppgpctile }}%, {{ 35 + player.ppgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.ppgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.ppg | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.apgpctile }}%, {{ 35 + player.apgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.apgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.apg | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.rpgpctile }}%, {{ 35 + player.rpgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.rpgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.rpg | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.spgpctile }}%, {{ 35 + player.spgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.spgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.spg | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.bpgpctile }}%, {{ 35 + player.bpgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.bpgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.bpg | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.tpgpctile }}%, {{ 35 + player.tpgpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.tpgpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.tpg | round(1) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                              <th>dnk</th>
+                              <th>dnk%</th>
+                              <th>lay</th>
+                              <th>lay%</th>
+                              <th>mid</th>
+                              <th>mid%</th>
+                            </tr>
+                            <tr>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.dunka100pctile }}%, {{ 35 + player.shooting.dunka100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.dunka100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.ast_dunk + player.shots.unast_dunk }}-{{ player.shots.ast_dunk + player.shots.unast_dunk + player.shots.miss_dunk }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.dunkpctpctile }}%, {{ 35 + player.shooting.dunkpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.dunkpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.dunkpct | int }}%
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.layupa100pctile }}%, {{ 35 + player.shooting.layupa100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.layupa100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.ast_layup + player.shots.unast_layup }}-{{ player.shots.ast_layup + player.shots.unast_layup + player.shots.miss_layup }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.layuppctpctile }}%, {{ 35 + player.shooting.layuppctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.layuppctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.layuppct | int }}%
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.mida100pctile }}%, {{ 35 + player.shooting.mida100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.mida100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.ast_mid + player.shots.unast_mid }}-{{ player.shots.ast_mid + player.shots.unast_mid + player.shots.miss_mid }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.midpctpctile }}%, {{ 35 + player.shooting.midpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.midpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.midpct | int }}%
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>2pt</th>
+                                    <th>2p%</th>
+                                    <th>3pt</th>
+                                    <th>3p%</th>
+                                    <th>ft</th>
+                                    <th>ft%</th>
+                                    <th>ftr</th>
+                                </tr>      
+                            </thead>
+                            <tr>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.fg2a100pctile }}%, {{ 35 + player.shooting.fg2a100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.fg2a100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.fg2m }}-{{ player.shots.fg2a }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.fg2pctpctile }}%, {{ 35 + player.shooting.fg2pctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.fg2pctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.fg2pct | int }}%
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.fg3a100pctile }}%, {{ 35 + player.shooting.fg3a100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.fg3a100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.fgm - player.shots.fg2m }}-{{ player.shots.fga - player.shots.fg2a }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.fg3pctpctile }}%, {{ 35 + player.shooting.fg3pctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.fg3pctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.fg3pct | int }}%
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.fta100pctile }}%, {{ 35 + player.shooting.fta100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.fta100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shots.ftm }}-{{ player.shots.fta }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.ftpctpctile }}%, {{ 35 + player.shooting.ftpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.ftpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.ftpct | int }}%
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.shooting.ftrpctile }}%, {{ 35 + player.shooting.ftrpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.shooting.ftrpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.shooting.ftr | round(2) }}
+                                </td>
+                            </tr>
+                        </table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dnk ast%</th>
+                                    <th>lay ast%</th>
+                                    <th>mid ast%</th>
+                                    <th>3pt ast%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assisted_shots.dunk_ast_pct_pctile }}%, {{ 35 + player.assisted_shots.dunk_ast_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assisted_shots.dunk_ast_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assisted_shots.dunk_ast_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assisted_shots.layup_ast_pct_pctile }}%, {{ 35 + player.assisted_shots.layup_ast_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assisted_shots.layup_ast_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assisted_shots.layup_ast_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assisted_shots.mid_ast_pct_pctile }}%, {{ 35 + player.assisted_shots.mid_ast_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assisted_shots.mid_ast_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assisted_shots.mid_ast_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assisted_shots.three_ast_pct_pctile }}%, {{ 35 + player.assisted_shots.three_ast_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assisted_shots.three_ast_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assisted_shots.three_ast_pct }}%
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>                    
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>astr</th>
+                                    <th>ast%</th>
+                                    <th>tor</th>
+                                    <th>to%</th>
+                                    <th>atr</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.passing.ast100pctile }}%, {{ 35 + player.passing.ast100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.passing.ast100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.passing.ast100 | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.passing.astpctpctile }}%, {{ 35 + player.passing.astpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.passing.astpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.passing.astpct | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ 100.0 - player.passing.tov100pctile }}%, {{ 35 + (100.0 - player.passing.tov100pctile) * 0.15 }}%, {{ TD_ALPHA }}); {% if (100.0 - player.passing.tov100pctile) > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.passing.tov100 | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ 100.0 - player.passing.tovpctpctile }}%, {{ 35 + (100.0 - player.passing.tovpctpctile) * 0.15 }}%, {{ TD_ALPHA }}); {% if (100.0 - player.passing.tovpctpctile) > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.passing.tovpct | round(1) }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.passing.atrpctile }}%, {{ 35 + player.passing.atrpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.passing.atrpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {% if player.passing.atr %}
+                                            {{ player.passing.atr | round(1) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {% if player.assist_distribution.total_shot_assists is not none and player.assist_distribution.total_shot_assists > 0 %}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>dnk ast</th>
+                                    <th>dnk%</th>
+                                    <th>lay ast</th>
+                                    <th>lay%</th>
+                                    <th>mid ast</th>
+                                    <th>mid%</th>
+                                    <th>3pt ast</th>
+                                    <th>3pt%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.dunk_assists_pctile }}%, {{ 35 + player.assist_distribution.dunk_assists_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.dunk_assists_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.dunk_assists }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.dunk_pct_pctile }}%, {{ 35 + player.assist_distribution.dunk_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.dunk_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.dunk_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.layup_assists_pctile }}%, {{ 35 + player.assist_distribution.layup_assists_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.layup_assists_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.layup_assists }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.layup_pct_pctile }}%, {{ 35 + player.assist_distribution.layup_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.layup_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.layup_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.mid_assists_pctile }}%, {{ 35 + player.assist_distribution.mid_assists_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.mid_assists_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.mid_assists }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.mid_pct_pctile }}%, {{ 35 + player.assist_distribution.mid_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.mid_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.mid_pct }}%
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.three_assists_pctile }}%, {{ 35 + player.assist_distribution.three_assists_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.three_assists_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.three_assists }}
+                                    </td>
+                                    <td class="stat-cell" style="background-color: hsla(45, {{ player.assist_distribution.three_pct_pctile }}%, {{ 35 + player.assist_distribution.three_pct_pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.assist_distribution.three_pct_pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                        {{ player.assist_distribution.three_pct }}%
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {% endif %}                   
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>st%</th>
+                                    <th>bk%</th>
+                                    <th>orr</th>
+                                    <th>or%</th>
+                                    <th>drr</th>
+                                    <th>dr%</th>
+                                </tr>
+                            </thead>
+                            <tr>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.defense.stl100pctile }}%, {{ 35 + player.defense.stl100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.defense.stl100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.defense.stl100 | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.defense.blkpctpctile }}%, {{ 35 + player.defense.blkpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.defense.blkpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.defense.blkpct | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.rebounding.orb100pctile }}%, {{ 35 + player.rebounding.orb100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.rebounding.orb100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.rebounding.orb100 | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.rebounding.orbpctpctile }}%, {{ 35 + player.rebounding.orbpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.rebounding.orbpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.rebounding.orbpct | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.rebounding.drb100pctile }}%, {{ 35 + player.rebounding.drb100pctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.rebounding.drb100pctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.rebounding.drb100 | round(1) }}
+                                </td>
+                                <td class="stat-cell" style="background-color: hsla(45, {{ player.rebounding.drbpctpctile }}%, {{ 35 + player.rebounding.drbpctpctile * 0.15 }}%, {{ TD_ALPHA }}); {% if player.rebounding.drbpctpctile > 50 %}color: #0a0e1a;{% endif %}">
+                                    {{ player.rebounding.drbpct | round(1) }}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}    
+    </div>
+</body>
+</html>
+
