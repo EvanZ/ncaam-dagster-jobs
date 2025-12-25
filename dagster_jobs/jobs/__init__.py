@@ -5,7 +5,7 @@ from dagster import (
     job, config_from_files)
 from ..assets.constants import (
     DAILY, DAILY_WOMEN, MODELS, MODELS_WOMEN, TOP_LINES, 
-    TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN, SEASONAL)
+    TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN, SEASONAL, WEB_EXPORT)
 from ..partitions import daily_partition
 from ..assets.ops import create_drop_table_op, create_backup_table_op, create_restore_table_op
 
@@ -74,6 +74,12 @@ season_report_job_women = define_asset_job(
     name="season_report_women",
     selection=AssetSelection.groups(RANKINGS_WOMEN),
     config=config_from_files(config_files=[os.environ["CONFIG_SEASON_RANKINGS_PATH_WOMEN"]])
+)
+
+# Web export job - generates JSON for the Vue.js frontend
+web_export_job = define_asset_job(
+    name="web_export",
+    selection=AssetSelection.groups(WEB_EXPORT)
 )
 
 drop_stage_daily_scoreboard = create_drop_table_op("stage_daily_scoreboard")
