@@ -12,6 +12,7 @@ SCOREBOARD_URL_TEMPLATE_WOMEN = lambda date_str: f"https://site.api.espn.com/api
 GAME_SUMMARY_URL_TEMPLATE_WOMEN = lambda id: f"https://site.api.espn.com/apis/site/v2/sports/basketball/womens-college-basketball/summary?event={id}"
 
 DATE_FORMAT = "%Y%m%d"
+SEASON_START_DATE = "2025-11-03"
 
 # compute kinds
 PYTHON = "python"

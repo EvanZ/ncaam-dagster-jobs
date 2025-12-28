@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from dagster import (
     asset,
     Field,
+    Array,
     Bool,
     String,
     Int,
@@ -29,7 +30,7 @@ import fasteners
 import pandas as pd
 
 from . import queries
-from .constants import PYTHON, DUCKDB, WEB_EXPORT
+from .constants import PYTHON, DUCKDB, WEB_EXPORT, SEASON_START_DATE
 
 # Load environment variables from dagster-jobs/.env if present
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
@@ -124,7 +125,7 @@ def load_elo_ratings(gender: str) -> dict[int, dict]:
     deps=["stage_top_lines", "stage_players", "stage_teams", "stage_team_ratings"],
     config_schema={
         "end_date": Field(String, is_required=True),
-        "top_n": Field(Int, default_value=100, is_required=False),
+        "top_n": Field(Int, default_value=500, is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
     },
     group_name=WEB_EXPORT,
@@ -218,9 +219,10 @@ def web_daily_report_json(
 @asset(
     deps=["stage_top_lines", "stage_players", "stage_teams", "stage_team_ratings", "stage_combine_measurements"],
     config_schema={
-        "start_date": Field(String, is_required=True),
+        "start_date": Field(String, default_value=SEASON_START_DATE, is_required=False),
         "end_date": Field(String, is_required=True),
-        "top_n": Field(Int, default_value=100, is_required=False),
+        "top_n": Field(Int, default_value=500, is_required=False),
+        "include_player_ids": Field(Array(Int), default_value=[], is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
     },
     group_name=WEB_EXPORT,
@@ -234,9 +236,10 @@ def web_season_rankings_json(
     Generate JSON file for season rankings - cumulative prospect rankings.
     Output: data/web/rankings/{end_date}.json
     """
-    start_date = context.op_config['start_date']
+    start_date = context.op_config.get('start_date') or SEASON_START_DATE
     end_date = context.op_config['end_date']
     top_n = context.op_config['top_n']
+    include_player_ids = context.op_config.get('include_player_ids', [])
     women = context.op_config['women']
     elo_map = load_elo_ratings("women" if women else "men")
 
@@ -246,7 +249,8 @@ def web_season_rankings_json(
             end_date=end_date,
             exp=[0, 1, 2, 3, 4, 5],  # All classes
             top_n=top_n,
-            women=women
+            women=women,
+            include_player_ids=include_player_ids,
         )).df()
 
     # Convert to JSON-serializable format
@@ -457,8 +461,7 @@ def web_conferences_json(
         "rankings_date": Field(Noneable(String), is_required=False, default_value=None),
         "base_rating": Field(Int, default_value=1500, is_required=False),
         "k_factor": Field(Int, default_value=24, is_required=False),
-        "max_recruit_rank": Field(Int, default_value=100, is_required=False),
-        "player_limit": Field(Int, default_value=200, is_required=False),
+        "player_limit": Field(Int, default_value=500, is_required=False),
     },
     group_name=WEB_EXPORT,
     compute_kind=PYTHON
@@ -468,13 +471,12 @@ def web_votes_elo_json(
 ) -> MaterializeResult:
     """
     Aggregate vote JSON blobs into Elo ratings for men's prospects.
-    Uses a filtered pool (by RSCI rank) from the season rankings snapshot.
+    Uses a capped pool from the season rankings snapshot.
     Output: data/web/men/elo_rankings.json
     """
     config = context.op_config
     base_rating = config.get("base_rating")
     k_factor = config.get("k_factor")
-    max_recruit_rank = config.get("max_recruit_rank")
     player_limit = config.get("player_limit")
     rankings_date = config.get("rankings_date")
 
@@ -516,16 +518,17 @@ def web_votes_elo_json(
 
     players = rankings_data.get("players", [])
 
-    # Filter pool by RSCI rank, fall back to top players
-    pool = [
-        p for p in players
-        if p.get("recruit_rank") is not None and p.get("recruit_rank") <= max_recruit_rank
-    ]
-    pool.sort(key=lambda p: p.get("recruit_rank", 9999))
-
-    if not pool:
-        pool = players[:player_limit]
-    else:
+    pool = list(players)
+    pool.sort(
+        key=lambda p: (
+            p.get("ez") is None,
+            -(
+                (p.get("ez") or 0)
+                / (p.get("gp") or 1)
+            ),
+        )
+    )
+    if player_limit:
         pool = pool[:player_limit]
 
     player_lookup = {p["player_id"]: p for p in pool}
@@ -536,6 +539,7 @@ def web_votes_elo_json(
     skipped_invalid = 0
     skipped_pool = 0
     skipped_gender = 0
+    distinct_voters = set()
 
     # Load votes
     if env == "PROD" and bucket:
@@ -614,6 +618,10 @@ def web_votes_elo_json(
         stats[pa]["last_vote_at"] = iso_ts
         stats[pb]["last_vote_at"] = iso_ts
 
+        ip_hash = record.get("ip_hash")
+        if ip_hash:
+            distinct_voters.add(ip_hash)
+
         processed_votes += 1
 
     output_players = []
@@ -643,10 +651,10 @@ def web_votes_elo_json(
             "rankings_date": rankings_date,
             "k_factor": k_factor,
             "base_rating": base_rating,
-            "max_recruit_rank": max_recruit_rank,
             "player_limit": player_limit,
             "player_pool": len(output_players),
             "total_votes": processed_votes,
+            "distinct_voters": len(distinct_voters),
             "skipped_invalid": skipped_invalid,
             "skipped_out_of_pool": skipped_pool,
             "skipped_wrong_gender": skipped_gender,
@@ -668,6 +676,7 @@ def web_votes_elo_json(
             "rankings_date": MetadataValue.text(rankings_date),
             "player_pool": MetadataValue.int(len(output_players)),
             "total_votes": MetadataValue.int(processed_votes),
+            "distinct_voters": MetadataValue.int(len(distinct_voters)),
             "skipped_invalid": MetadataValue.int(skipped_invalid),
             "skipped_out_of_pool": MetadataValue.int(skipped_pool),
             "skipped_wrong_gender": MetadataValue.int(skipped_gender),
@@ -676,7 +685,7 @@ def web_votes_elo_json(
 
 
 @asset(
-    deps=["web_daily_report_json", "web_season_rankings_json", "web_prospects_json", "web_conferences_json", "web_votes_elo_json"],
+    deps=["web_daily_report_json", "web_season_rankings_json", "web_conferences_json", "web_votes_elo_json"],
     config_schema={
         "end_date": Field(String, is_required=True),
     },

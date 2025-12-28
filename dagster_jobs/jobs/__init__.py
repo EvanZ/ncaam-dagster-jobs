@@ -79,7 +79,7 @@ season_report_job_women = define_asset_job(
 # Web export job - generates JSON for the Vue.js frontend
 web_export_job = define_asset_job(
     name="web_export",
-    selection=AssetSelection.groups(WEB_EXPORT)
+    selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json")
 )
 
 drop_stage_daily_scoreboard = create_drop_table_op("stage_daily_scoreboard")

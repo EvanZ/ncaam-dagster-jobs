@@ -12,6 +12,7 @@ from dagster import (
     asset, 
     op, 
     Field,
+    Array,
     Bool,
     String,
     Int,
@@ -34,6 +35,7 @@ from jinja2 import Environment, FileSystemLoader
 from . import queries
 from .constants import (
     DATE_FORMAT, 
+    SEASON_START_DATE,
     ROSTER_URL, 
     ROSTER_URL_WOMEN,
     SCOREBOARD_URL_TEMPLATE, 
@@ -785,7 +787,7 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
         """
         create html report for newsletter
         """
-        start_date = context.op_config['start_date']
+        start_date = context.op_config.get('start_date') or SEASON_START_DATE
         end_date = context.op_config['end_date']
         top_n = context.op_config['top_n']
 
@@ -832,10 +834,11 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
         name=f"season_rankings_report_for_{name}",
         deps=["stage_top_lines", "stage_players", "stage_teams", "stage_combine_measurements"],
         config_schema={
-            "start_date": Field(String, is_required=True),
+            "start_date": Field(String, default_value=SEASON_START_DATE, is_required=False),
             "end_date": Field(String, is_required=True),
             "top_n": Field(Int, default_value=50, is_required=False),
-            "simple": Field(Bool, default_value=False, is_required=False)
+            "simple": Field(Bool, default_value=False, is_required=False),
+            "include_player_ids": Field(Array(Int), default_value=[], is_required=False),
         },
         group_name=RANKINGS,
         compute_kind=PYTHON
@@ -848,13 +851,15 @@ def build_season_rankings_report(exp: list[int], name: str="report") -> AssetsDe
         end_date = context.op_config['end_date']
         top_n = context.op_config['top_n']
         simplified = context.op_config['simple']
+        include_player_ids = context.op_config.get('include_player_ids', [])
 
         with database.get_connection() as conn:
             df = conn.execute(query=queries.prospect_rankings_report_query(
                 start_date=start_date,
                 end_date=end_date,
                 exp=exp,
-                top_n=top_n
+                top_n=top_n,
+                include_player_ids=include_player_ids,
             )).df()
 
         # Set up Jinja2 environment to load templates from the current directory

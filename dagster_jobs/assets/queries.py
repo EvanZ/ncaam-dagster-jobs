@@ -1273,12 +1273,29 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
     order by class_rank asc;
     """
 
-def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int], top_n: int, women: bool=False) -> str:
+def prospect_rankings_report_query(
+    start_date: str,
+    end_date: str,
+    exp: list[int],
+    top_n: int,
+    women: bool = False,
+    include_player_ids: list[int] | None = None,
+) -> str:
     """
     build the top lines html report query
     """
-    return f"""
-    with stats as (
+    include_ids = []
+    for pid in include_player_ids or []:
+        try:
+            include_ids.append(int(pid))
+        except (TypeError, ValueError):
+            continue
+
+    include_filter = ""
+    if include_ids:
+        include_filter = f"and tl.player_id in ({', '.join(map(str, include_ids))})"
+
+    stats_select = f"""
         select
             player_id,
             sum(case when starter then 1 else 0 end) as gs,
@@ -1338,10 +1355,37 @@ def prospect_rankings_report_query(start_date:str, end_date:str, exp: list[int],
         join {'stage_game_logs_women' if women else 'stage_game_logs'} g on tl.game_id=g.game_id
         where years in ({', '.join(map(str, exp))})
         and tl.date between '{start_date}' and '{end_date}'
+        {{extra_filter}}
         group by player_id
-        order by ez desc
-        limit {top_n}
-    ),
+    """
+
+    if include_ids:
+        stats_cte = f"""
+        stats_base as (
+            {stats_select.format(extra_filter="")}
+            order by ez desc
+            limit {top_n}
+        ),
+        stats_manual as (
+            {stats_select.format(extra_filter=include_filter)}
+        ),
+        stats as (
+            select * from stats_base
+            union
+            select * from stats_manual
+        ),
+        """
+    else:
+        stats_cte = f"""
+        stats as (
+            {stats_select.format(extra_filter="")}
+            order by ez desc
+            limit {top_n}
+        ),
+        """
+
+    return f"""
+    with {stats_cte}
     sos as (
         with team_games as (
             with schedules as (

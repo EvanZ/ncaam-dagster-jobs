@@ -8,3 +8,15 @@ delete
 drop
 .vscode/
 .env
+data/web/manifest.json
+data/web/men/daily/*
+data/web/men/rankings/*
+data/web/men/prospects.json
+data/web/men/conferences.json
+data/web/women/daily/*
+data/web/women/rankings/*
+data/web/women/prospects.json
+data/web/women/conferences.json
+data/web/votes/*
+data/web/men/elo_rankings.json
+.DS_Store
