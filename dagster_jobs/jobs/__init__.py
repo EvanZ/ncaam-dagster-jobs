@@ -1,8 +1,11 @@
 import os
 
 from dagster import (
-    AssetSelection, define_asset_job, 
-    job, config_from_files)
+    AssetSelection,
+    define_asset_job,
+    job,
+    config_from_files,
+)
 from ..assets.constants import (
     DAILY, DAILY_WOMEN, MODELS, MODELS_WOMEN, TOP_LINES, 
     TOP_LINES_WOMEN, RANKINGS, RANKINGS_WOMEN, SEASONAL, WEB_EXPORT)
@@ -79,7 +82,43 @@ season_report_job_women = define_asset_job(
 # Web export job - generates JSON for the Vue.js frontend
 web_export_job = define_asset_job(
     name="web_export",
-    selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json")
+    selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json"),
+    config={
+        "ops": {
+            "web_daily_report_json": {"config": {"end_date": "", "top_n": 500}},
+            "web_season_rankings_json": {
+                "config": {
+                    "end_date": "",
+                    "start_date": "2025-11-03",
+                    "top_n": 500,
+                    "include_player_ids": [],
+                }
+            },
+            "web_manifest_json": {"config": {"end_date": ""}},
+        },
+    },
+)
+
+web_export_job_women = define_asset_job(
+    name="web_export_women",
+    selection=AssetSelection.groups(WEB_EXPORT)
+    - AssetSelection.assets("web_prospects_json", "web_votes_elo_json"),
+    config={
+        "ops": {
+            "web_daily_report_json": {"config": {"women": True, "end_date": "", "top_n": 500}},
+            "web_season_rankings_json": {
+                "config": {
+                    "women": True,
+                    "end_date": "",
+                    "start_date": "2025-11-03",
+                    "top_n": 500,
+                    "include_player_ids": [],
+                }
+            },
+            "web_conferences_json": {"config": {"women": True}},
+            "web_manifest_json": {"config": {"end_date": ""}},
+        },
+    },
 )
 
 drop_stage_daily_scoreboard = create_drop_table_op("stage_daily_scoreboard")

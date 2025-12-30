@@ -11,6 +11,7 @@ from typing import Generator
 from pathlib import Path
 import boto3
 from dotenv import load_dotenv
+from datetime import date, timedelta
 
 from dagster import (
     asset,
@@ -57,6 +58,16 @@ def convert_structs_to_dicts(df: pd.DataFrame) -> list[dict]:
         return obj
     
     return [make_serializable(record) for record in records]
+
+
+def resolve_women(context: AssetExecutionContext) -> bool:
+    women = context.op_config.get("women", False)
+    if women:
+        return True
+    return context.job_name == "web_export_women"
+
+def default_end_date() -> str:
+    return (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def s3_config():
@@ -124,7 +135,7 @@ def load_elo_ratings(gender: str) -> dict[int, dict]:
 @asset(
     deps=["stage_top_lines", "stage_players", "stage_teams", "stage_team_ratings"],
     config_schema={
-        "end_date": Field(String, is_required=True),
+        "end_date": Field(Noneable(String), default_value=None, is_required=False),
         "top_n": Field(Int, default_value=500, is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
     },
@@ -142,9 +153,9 @@ def web_daily_report_json(
     """
     from datetime import timedelta
     
-    end_date = context.op_config['end_date']
+    end_date = context.op_config.get('end_date') or default_end_date()
     top_n = context.op_config['top_n']
-    women = context.op_config['women']
+    women = resolve_women(context)
     
     end_dt = datetime.strptime(end_date, '%Y-%m-%d')
     
@@ -220,7 +231,7 @@ def web_daily_report_json(
     deps=["stage_top_lines", "stage_players", "stage_teams", "stage_team_ratings", "stage_combine_measurements"],
     config_schema={
         "start_date": Field(String, default_value=SEASON_START_DATE, is_required=False),
-        "end_date": Field(String, is_required=True),
+        "end_date": Field(Noneable(String), default_value=None, is_required=False),
         "top_n": Field(Int, default_value=500, is_required=False),
         "include_player_ids": Field(Array(Int), default_value=[], is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
@@ -237,10 +248,10 @@ def web_season_rankings_json(
     Output: data/web/rankings/{end_date}.json
     """
     start_date = context.op_config.get('start_date') or SEASON_START_DATE
-    end_date = context.op_config['end_date']
+    end_date = context.op_config.get('end_date') or default_end_date()
     top_n = context.op_config['top_n']
     include_player_ids = context.op_config.get('include_player_ids', [])
-    women = context.op_config['women']
+    women = resolve_women(context)
     elo_map = load_elo_ratings("women" if women else "men")
 
     with database.get_connection() as conn:
@@ -313,7 +324,7 @@ def web_prospects_json(
     Includes basic info needed for voting cards.
     Output: data/web/prospects.json
     """
-    women = context.op_config['women']
+    women = resolve_women(context)
     
     players_table = 'stage_players_women' if women else 'stage_players'
     teams_table = 'stage_teams_women' if women else 'stage_teams'
@@ -405,7 +416,7 @@ def web_conferences_json(
     Generate JSON file with all conferences for filtering.
     Output: data/web/conferences.json
     """
-    women = context.op_config['women']
+    women = resolve_women(context)
     table = 'stage_conferences_women' if women else 'stage_conferences'
 
     query = f"""
@@ -687,7 +698,7 @@ def web_votes_elo_json(
 @asset(
     deps=["web_daily_report_json", "web_season_rankings_json", "web_conferences_json", "web_votes_elo_json"],
     config_schema={
-        "end_date": Field(String, is_required=True),
+        "end_date": Field(Noneable(String), default_value=None, is_required=False),
     },
     group_name=WEB_EXPORT,
     compute_kind=PYTHON
@@ -700,7 +711,7 @@ def web_manifest_json(
     The Vue.js app can fetch this to know what data is available.
     Output: data/web/manifest.json
     """
-    end_date = context.op_config['end_date']
+    end_date = context.op_config.get('end_date') or default_end_date()
     
     web_data_path = os.path.join(
         os.environ.get('DAGSTER_HOME', '.'),
