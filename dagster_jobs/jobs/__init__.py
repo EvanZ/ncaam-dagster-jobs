@@ -94,6 +94,7 @@ web_export_job = define_asset_job(
                     "include_player_ids": [],
                 }
             },
+            "web_votes_elo_json": {"config": {"end_date": ""}},
             "web_manifest_json": {"config": {"end_date": ""}},
         },
     },

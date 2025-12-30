@@ -470,6 +470,7 @@ def web_conferences_json(
     deps=["web_season_rankings_json"],
     config_schema={
         "rankings_date": Field(Noneable(String), is_required=False, default_value=None),
+        "end_date": Field(Noneable(String), is_required=False, default_value=None),
         "base_rating": Field(Int, default_value=1500, is_required=False),
         "k_factor": Field(Int, default_value=24, is_required=False),
         "player_limit": Field(Int, default_value=500, is_required=False),
@@ -489,7 +490,7 @@ def web_votes_elo_json(
     base_rating = config.get("base_rating")
     k_factor = config.get("k_factor")
     player_limit = config.get("player_limit")
-    rankings_date = config.get("rankings_date")
+    rankings_date = config.get("rankings_date") or config.get("end_date")
 
     web_data_path = os.path.join(
         os.environ.get('DAGSTER_HOME', '.'),
@@ -551,6 +552,8 @@ def web_votes_elo_json(
     skipped_pool = 0
     skipped_gender = 0
     distinct_voters = set()
+    total_vote_files = 0
+    latest_vote_ts = None
 
     # Load votes
     if env == "PROD" and bucket:
@@ -565,12 +568,15 @@ def web_votes_elo_json(
                 key = obj["Key"]
                 if not key.endswith(".json"):
                     continue
+                total_vote_files += 1
                 try:
                     data = client.get_object(Bucket=bucket, Key=key)
                     record = json.loads(data["Body"].read())
                     ts = record.get("received_at") or record.get("timestamp")
                     vote_time = datetime.fromisoformat(ts) if ts else None
                     vote_records.append((vote_time, record))
+                    if vote_time and (latest_vote_ts is None or vote_time > latest_vote_ts):
+                        latest_vote_ts = vote_time
                 except Exception:
                     skipped_invalid += 1
             if resp.get("IsTruncated"):
@@ -585,12 +591,15 @@ def web_votes_elo_json(
                     if not fname.endswith(".json"):
                         continue
                     fpath = os.path.join(root, fname)
+                    total_vote_files += 1
                     try:
                         with open(fpath, "r") as f:
                             record = json.load(f)
                         ts = record.get("received_at") or record.get("timestamp")
                         vote_time = datetime.fromisoformat(ts) if ts else None
                         vote_records.append((vote_time, record))
+                        if vote_time and (latest_vote_ts is None or vote_time > latest_vote_ts):
+                            latest_vote_ts = vote_time
                     except Exception:
                         skipped_invalid += 1
 
@@ -691,6 +700,8 @@ def web_votes_elo_json(
             "skipped_invalid": MetadataValue.int(skipped_invalid),
             "skipped_out_of_pool": MetadataValue.int(skipped_pool),
             "skipped_wrong_gender": MetadataValue.int(skipped_gender),
+            "vote_files": MetadataValue.int(total_vote_files),
+            "latest_vote_at": MetadataValue.text(latest_vote_ts.isoformat() if latest_vote_ts else "unknown"),
         }
     )
 
