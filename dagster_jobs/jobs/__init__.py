@@ -85,13 +85,14 @@ web_export_job = define_asset_job(
     selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json"),
     config={
         "ops": {
-            "web_daily_report_json": {"config": {"end_date": "", "top_n": 500}},
+            "web_daily_report_json": {"config": {"end_date": "", "top_n": 500, "sparkline_games": 10}},
             "web_season_rankings_json": {
                 "config": {
                     "end_date": "",
                     "start_date": "2025-11-03",
                     "top_n": 500,
                     "include_player_ids": [],
+                    "sparkline_games": 10,
                 }
             },
             "web_votes_elo_json": {"config": {"end_date": ""}},
@@ -106,7 +107,7 @@ web_export_job_women = define_asset_job(
     - AssetSelection.assets("web_prospects_json", "web_votes_elo_json"),
     config={
         "ops": {
-            "web_daily_report_json": {"config": {"women": True, "end_date": "", "top_n": 500}},
+            "web_daily_report_json": {"config": {"women": True, "end_date": "", "top_n": 500, "sparkline_games": 10}},
             "web_season_rankings_json": {
                 "config": {
                     "women": True,
@@ -114,6 +115,7 @@ web_export_job_women = define_asset_job(
                     "start_date": "2025-11-03",
                     "top_n": 500,
                     "include_player_ids": [],
+                    "sparkline_games": 10,
                 }
             },
             "web_conferences_json": {"config": {"women": True}},

@@ -69,6 +69,54 @@ def resolve_women(context: AssetExecutionContext) -> bool:
 def default_end_date() -> str:
     return (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
 
+def load_ez_history(
+    conn,
+    player_ids: list[int],
+    games: int,
+    women: bool,
+) -> dict[int, list[float]]:
+    if not player_ids or games <= 0:
+        return {}
+    ids = []
+    for pid in player_ids:
+        try:
+            ids.append(int(pid))
+        except (TypeError, ValueError):
+            continue
+    if not ids:
+        return {}
+    table = "stage_top_lines_women" if women else "stage_top_lines"
+    query = f"""
+    with recent as (
+        select
+            player_id,
+            ez,
+            date,
+            game_id,
+            row_number() over (
+                partition by player_id
+                order by date desc, game_id desc
+            ) as rn
+        from {table}
+        where player_id in ({', '.join(map(str, ids))})
+    )
+    select
+        player_id,
+        list(ez order by date asc, game_id asc) as ez_history
+    from recent
+    where rn <= {games}
+    group by player_id
+    """
+    df = conn.execute(query).df()
+    history = {}
+    for row in df.itertuples(index=False):
+        ez_history = row.ez_history
+        if ez_history is None:
+            history[int(row.player_id)] = []
+        else:
+            history[int(row.player_id)] = list(ez_history)
+    return history
+
 
 def s3_config():
     env = os.environ.get("ENVIRONMENT", "DEV").upper()
@@ -137,6 +185,7 @@ def load_elo_ratings(gender: str) -> dict[int, dict]:
     config_schema={
         "end_date": Field(Noneable(String), default_value=None, is_required=False),
         "top_n": Field(Int, default_value=500, is_required=False),
+        "sparkline_games": Field(Int, default_value=10, is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
     },
     group_name=WEB_EXPORT,
@@ -155,6 +204,7 @@ def web_daily_report_json(
     
     end_date = context.op_config.get('end_date') or default_end_date()
     top_n = context.op_config['top_n']
+    sparkline_games = context.op_config.get("sparkline_games", 10)
     women = resolve_women(context)
     
     end_dt = datetime.strptime(end_date, '%Y-%m-%d')
@@ -187,14 +237,17 @@ def web_daily_report_json(
                 women=women
             )).df()
 
-        # Convert to JSON-serializable format
-        players = convert_structs_to_dicts(df)
+            # Convert to JSON-serializable format
+            players = convert_structs_to_dicts(df)
+            player_ids = [p.get("player_id") for p in players if p.get("player_id") is not None]
+            history_map = load_ez_history(conn, player_ids, sparkline_games, women)
         # Attach Elo rating if available
         for player in players:
             pid = player.get("player_id")
             if pid in elo_map:
                 player["elo_rating"] = elo_map[pid]["elo_rating"]
                 player["elo_rank"] = elo_map[pid]["elo_rank"]
+            player["ez_history"] = history_map.get(pid, [])
         
         output = {
             "meta": {
@@ -203,7 +256,8 @@ def web_daily_report_json(
                 "days": days,
                 "generated_at": datetime.now().isoformat(),
                 "total_players": len(players),
-                "gender": "women" if women else "men"
+                "gender": "women" if women else "men",
+                "sparkline_games": sparkline_games
             },
             "players": players
         }
@@ -234,6 +288,7 @@ def web_daily_report_json(
         "end_date": Field(Noneable(String), default_value=None, is_required=False),
         "top_n": Field(Int, default_value=500, is_required=False),
         "include_player_ids": Field(Array(Int), default_value=[], is_required=False),
+        "sparkline_games": Field(Int, default_value=10, is_required=False),
         "women": Field(Bool, default_value=False, is_required=False)
     },
     group_name=WEB_EXPORT,
@@ -251,6 +306,7 @@ def web_season_rankings_json(
     end_date = context.op_config.get('end_date') or default_end_date()
     top_n = context.op_config['top_n']
     include_player_ids = context.op_config.get('include_player_ids', [])
+    sparkline_games = context.op_config.get("sparkline_games", 10)
     women = resolve_women(context)
     elo_map = load_elo_ratings("women" if women else "men")
 
@@ -263,6 +319,8 @@ def web_season_rankings_json(
             women=women,
             include_player_ids=include_player_ids,
         )).df()
+        player_ids = [pid for pid in df["player_id"].tolist() if pid is not None]
+        history_map = load_ez_history(conn, player_ids, sparkline_games, women)
 
     # Convert to JSON-serializable format
     players = convert_structs_to_dicts(df)
@@ -271,6 +329,7 @@ def web_season_rankings_json(
         if pid in elo_map:
             player["elo_rating"] = elo_map[pid]["elo_rating"]
             player["elo_rank"] = elo_map[pid]["elo_rank"]
+        player["ez_history"] = history_map.get(pid, [])
 
     output = {
         "meta": {
@@ -278,7 +337,8 @@ def web_season_rankings_json(
             "end_date": end_date,
             "generated_at": datetime.now().isoformat(),
             "total_players": len(players),
-            "gender": "women" if women else "men"
+            "gender": "women" if women else "men",
+            "sparkline_games": sparkline_games
         },
         "players": players
     }
