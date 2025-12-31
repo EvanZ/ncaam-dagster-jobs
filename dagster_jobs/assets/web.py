@@ -6,6 +6,7 @@ that can be consumed by the Vue.js frontend.
 
 import json
 import os
+from collections import defaultdict
 from datetime import datetime
 from typing import Generator
 from pathlib import Path
@@ -31,7 +32,17 @@ import fasteners
 import pandas as pd
 
 from . import queries
-from .constants import PYTHON, DUCKDB, WEB_EXPORT, SEASON_START_DATE
+from .constants import (
+    PYTHON,
+    DUCKDB,
+    WEB_EXPORT,
+    SEASON_START_DATE,
+    DATE_FORMAT,
+    SCOREBOARD_URL_TEMPLATE,
+    SCOREBOARD_URL_TEMPLATE_WOMEN,
+)
+from ..resources import LocalFileStorage
+from ..utils.utils import fetch_data
 
 # Load environment variables from dagster-jobs/.env if present
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
@@ -527,6 +538,362 @@ def web_conferences_json(
 
 
 @asset(
+    deps=["stage_teams", "web_season_rankings_json", "web_conferences_json"],
+    config_schema={
+        "schedule_date": Field(Noneable(String), default_value=None, is_required=False),
+        "rankings_date": Field(Noneable(String), default_value=None, is_required=False),
+        "women": Field(Bool, default_value=False, is_required=False),
+        "max_featured": Field(Int, default_value=4, is_required=False),
+        "max_per_team": Field(Int, default_value=2, is_required=False),
+        "days_ahead": Field(Int, default_value=0, is_required=False, description="Also export this many future days (inclusive of schedule_date)"),
+    },
+    group_name=WEB_EXPORT,
+    compute_kind=PYTHON,
+)
+def web_schedule_json(
+    context: AssetExecutionContext,
+    database: DuckDBResource,
+    storage: LocalFileStorage,
+) -> MaterializeResult:
+    """
+    Build JSON for the current day's unplayed schedule with betting lines and featured prospects.
+    Output: data/web/{gender}/schedule/{schedule_date}.json
+    """
+
+    cfg = context.op_config
+    women = resolve_women(context)
+    base_schedule_date = cfg.get("schedule_date") or date.today().isoformat()
+    rankings_date = cfg.get("rankings_date")
+    max_featured = cfg.get("max_featured") or 4
+    max_per_team = cfg.get("max_per_team") or 2
+    days_ahead = int(cfg.get("days_ahead") or 0)
+
+    if days_ahead < 0:
+        raise ValueError("days_ahead cannot be negative")
+
+    try:
+        base_schedule_dt = datetime.strptime(base_schedule_date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError("schedule_date must be YYYY-MM-DD") from exc
+
+    schedule_dates = [
+        (base_schedule_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
+        for offset in range(days_ahead + 1)
+    ]
+
+    def season_score(player: dict) -> float:
+        try:
+            ez = float(player.get("ez") or 0.0)
+            gp = float(player.get("gp") or 0.0)
+            return ez / gp if gp else 0.0
+        except Exception:
+            return 0.0
+
+    def parse_record(records) -> tuple[int | None, int | None]:
+        for rec in records or []:
+            summary = rec.get("summary") or ""
+            if "-" not in summary:
+                continue
+            try:
+                wins, losses = summary.split("-")[:2]
+                return int(wins.strip()), int(losses.strip())
+            except Exception:
+                continue
+        return None, None
+
+    def iso_dt(value: str | None):
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    def safe_float(value):
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    def safe_int(value):
+        try:
+            return int(value)
+        except Exception:
+            return None
+
+    teams_table = "stage_teams_women" if women else "stage_teams"
+    with database.get_connection() as conn:
+        teams_df = conn.execute(
+            f"""
+            select 
+                id,
+                displayName,
+                location,
+                abbreviation,
+                shortConferenceName,
+                conferenceName,
+                color,
+                alternateColor,
+                logos
+            from {teams_table}
+            """
+        ).df()
+    teams_lookup = {}
+    for row in teams_df.to_dict(orient="records"):
+        try:
+            tid = int(row.get("id"))
+        except (TypeError, ValueError):
+            continue
+        raw_logos = row.get("logos")
+        logo_list = []
+        if isinstance(raw_logos, list):
+            logo_list = raw_logos
+        elif raw_logos is not None and hasattr(raw_logos, "tolist"):
+            try:
+                maybe_list = raw_logos.tolist()
+                if isinstance(maybe_list, list):
+                    logo_list = maybe_list
+            except Exception:
+                logo_list = []
+        logo_href = None
+        if logo_list and isinstance(logo_list[0], dict):
+            logo_href = logo_list[0].get("href")
+        teams_lookup[tid] = {
+            "displayName": row.get("displayName"),
+            "location": row.get("location"),
+            "abbreviation": row.get("abbreviation"),
+            "shortConferenceName": row.get("shortConferenceName"),
+            "conferenceName": row.get("conferenceName"),
+            "color": row.get("color"),
+            "alternateColor": row.get("alternateColor"),
+            "logo": logo_href,
+        }
+
+    web_root = os.path.join(os.environ.get("DAGSTER_HOME", "."), "data", "web")
+    manifest_path = os.path.join(web_root, "manifest.json")
+    if not rankings_date and os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r") as f:
+                manifest = json.load(f)
+            gender_key = "women" if women else "men"
+            rankings_date = (manifest.get(gender_key, {}).get("rankings") or [manifest.get("latest_date")])[0]
+        except Exception:
+            rankings_date = None
+    if not rankings_date:
+        rankings_date = default_end_date()
+
+    rankings_file = os.path.join(web_root, "women" if women else "men", "rankings", f"{rankings_date}.json")
+    if not os.path.exists(rankings_file):
+        raise FileNotFoundError(f"Rankings file not found: {rankings_file}")
+    with open(rankings_file, "r") as f:
+        rankings_data = json.load(f)
+
+    power_confs = {"ACC", "Big Ten", "Big 12", "SEC", "Pac-12", "Big East"}
+
+    players = rankings_data.get("players", [])
+    ranked_players = sorted(players, key=season_score, reverse=True)
+    team_players: dict[int, list[dict]] = defaultdict(list)
+    for idx, player in enumerate(ranked_players, start=1):
+        tid = player.get("team_id")
+        if tid is None:
+            continue
+        try:
+            tid = int(tid)
+        except (TypeError, ValueError):
+            continue
+        player_copy = dict(player)
+        class_rank = player.get("class_rank")
+        display_rank = player.get("display_rank") or class_rank
+        player_copy.update(
+            {
+                "player_id": player.get("player_id"),
+                "display_name": player.get("display_name") or player.get("full_name"),
+                "full_name": player.get("full_name") or player.get("display_name"),
+                "team_id": tid,
+                "team_conf": player.get("team_conf"),
+                "headshot": player.get("headshot_href"),
+                "headshot_href": player.get("headshot_href"),
+                "ez": player.get("ez"),
+                "gp": player.get("gp"),
+                "season_score": season_score(player),
+                "overall_rank": idx,
+                "class_rank": class_rank if class_rank is not None else idx,
+                "display_rank": display_rank if display_rank is not None else idx,
+                "class": player.get("experience_display_value"),
+                "experience_display_value": player.get("experience_display_value"),
+                "position": player.get("position_display_name"),
+                "position_display_name": player.get("position_display_name"),
+                "recruit_rank": player.get("recruit_rank"),
+                "jersey": player.get("jersey"),
+                "ez_history": player.get("ez_history") or [],
+            }
+        )
+        team_players[tid].append(player_copy)
+
+    def build_team_side(comp) -> dict:
+        team = comp.get("team") or {}
+        team_id = team.get("id")
+        try:
+            team_id_int = int(team_id)
+        except (TypeError, ValueError):
+            team_id_int = None
+        wins, losses = parse_record(comp.get("records"))
+        meta = teams_lookup.get(team_id_int, {})
+        conference = team.get("conferenceAbbreviation") or meta.get("shortConferenceName")
+        entry = {
+            "team_id": team_id_int,
+            "name": team.get("displayName") or meta.get("displayName"),
+            "location": team.get("location") or meta.get("location"),
+            "abbrev": team.get("abbreviation") or meta.get("abbreviation"),
+            "logo": team.get("logo") or meta.get("logo"),
+            "conference": conference,
+            "conference_full": meta.get("conferenceName"),
+            "color": meta.get("color"),
+            "alternate_color": meta.get("alternateColor"),
+            "is_power": conference in power_confs if conference else False,
+        }
+        if wins is not None and losses is not None:
+            entry["record"] = {"wins": wins, "losses": losses}
+        rank_obj = comp.get("curatedRank") or {}
+        entry["rank"] = rank_obj.get("current") or comp.get("rank")
+        return entry
+
+    outputs = []
+
+    for schedule_date in schedule_dates:
+        try:
+            schedule_dt = datetime.strptime(schedule_date, "%Y-%m-%d")
+        except ValueError:
+            continue
+
+        date_token = schedule_dt.strftime(DATE_FORMAT)
+        scoreboard_url = SCOREBOARD_URL_TEMPLATE_WOMEN(date_token) if women else SCOREBOARD_URL_TEMPLATE(date_token)
+        scoreboard = fetch_data(scoreboard_url, context)
+
+        raw_path = os.path.join(storage.filepath, "schedule", "women" if women else "men", schedule_date)
+        os.makedirs(raw_path, exist_ok=True)
+        raw_file = os.path.join(raw_path, "scoreboard.json")
+        with open(raw_file, "w") as f:
+            json.dump(scoreboard, f)
+
+        games: list[dict] = []
+        started_games = 0
+
+        events = scoreboard.get("events") or []
+        for event in events:
+            competition = (event.get("competitions") or [{}])[0]
+            status_type = (competition.get("status") or {}).get("type") or {}
+            state = status_type.get("state", "").lower()
+
+            if state not in {"pre", "scheduled", ""}:
+                started_games += 1
+
+            competitors = competition.get("competitors") or []
+            home = next((c for c in competitors if c.get("homeAway") == "home"), None)
+            away = next((c for c in competitors if c.get("homeAway") == "away"), None)
+            if not home or not away:
+                continue
+
+            home_team = build_team_side(home)
+            away_team = build_team_side(away)
+
+            odds_raw = competition.get("odds") or []
+            primary_odds = odds_raw[0] if odds_raw else {}
+            odds = {
+                "provider": ((primary_odds.get("provider") or {}).get("name")),
+                "details": primary_odds.get("details"),
+                "spread": safe_float(primary_odds.get("spread")),
+                "over_under": safe_float(primary_odds.get("overUnder")),
+                "home_moneyline": safe_int((primary_odds.get("homeTeamOdds") or {}).get("moneyLine")),
+                "away_moneyline": safe_int((primary_odds.get("awayTeamOdds") or {}).get("moneyLine")),
+            }
+            if (primary_odds.get("homeTeamOdds") or {}).get("favorite"):
+                odds["favorite"] = "home"
+            elif (primary_odds.get("awayTeamOdds") or {}).get("favorite"):
+                odds["favorite"] = "away"
+            if not any(val is not None for val in odds.values()):
+                odds = None
+
+            broadcast = None
+            broadcasts = competition.get("broadcasts") or []
+            if broadcasts:
+                names = broadcasts[0].get("names") or []
+                broadcast = names[0] if names else broadcasts[0].get("shortName")
+
+            start_iso = competition.get("date") or event.get("date")
+            start_dt = iso_dt(start_iso)
+
+            home_featured = team_players.get(home_team.get("team_id"), [])[:max_per_team]
+            away_featured = team_players.get(away_team.get("team_id"), [])[:max_per_team]
+            featured = sorted(home_featured + away_featured, key=lambda p: p["overall_rank"])[:max_featured]
+
+            try:
+                game_id = int(event.get("id"))
+            except (TypeError, ValueError):
+                game_id = event.get("id")
+
+            games.append(
+                {
+                    "game_id": game_id,
+                    "start_time": start_dt.isoformat() if start_dt else start_iso,
+                    "status": status_type.get("detail") or status_type.get("description"),
+                    "neutral_site": bool(competition.get("neutralSite")),
+                    "venue": (competition.get("venue") or {}).get("fullName"),
+                    "broadcast": broadcast,
+                    "odds": odds,
+                    "home": home_team,
+                    "away": away_team,
+                    "featured_players": featured,
+                    "conference": home_team.get("conference") or away_team.get("conference"),
+                    "url": event.get("links", [{}])[0].get("href"),
+                    "_sort": start_dt.timestamp() if start_dt else None,
+                }
+            )
+
+        games.sort(key=lambda g: (g.get("_sort") is None, g.get("_sort"), g.get("game_id")))
+        for game in games:
+            game.pop("_sort", None)
+
+        schedule_dir = os.path.join(web_root, "women" if women else "men", "schedule")
+        os.makedirs(schedule_dir, exist_ok=True)
+        output_file = os.path.join(schedule_dir, f"{schedule_date}.json")
+
+        output = {
+            "meta": {
+                "schedule_date": schedule_date,
+                "rankings_date": rankings_date,
+                "generated_at": datetime.now().isoformat(),
+                "gender": "women" if women else "men",
+                "total_games": len(games),
+                "skipped_started": started_games,
+            },
+            "games": games,
+        }
+
+        with open(output_file, "w") as f:
+            json.dump(output, f, indent=2, default=str)
+        maybe_upload_json(output_file, f"{'women' if women else 'men'}/schedule/{schedule_date}.json")
+        context.log.info(f"Wrote schedule with {len(games)} games to {output_file}")
+
+        outputs.append(
+            {
+                "schedule_date": schedule_date,
+                "output_file": output_file,
+                "num_games": len(games),
+                "skipped_started": started_games,
+            }
+        )
+
+    return MaterializeResult(
+        metadata={
+            "outputs": MetadataValue.json(outputs),
+            "rankings_date": MetadataValue.text(rankings_date),
+            "schedule_dates": MetadataValue.json(schedule_dates),
+        }
+    )
+
+
+@asset(
     deps=["web_season_rankings_json"],
     config_schema={
         "rankings_date": Field(Noneable(String), is_required=False, default_value=None),
@@ -767,7 +1134,7 @@ def web_votes_elo_json(
 
 
 @asset(
-    deps=["web_daily_report_json", "web_season_rankings_json", "web_conferences_json", "web_votes_elo_json"],
+    deps=["web_daily_report_json", "web_season_rankings_json", "web_conferences_json", "web_votes_elo_json", "web_schedule_json"],
     config_schema={
         "end_date": Field(Noneable(String), default_value=None, is_required=False),
     },
@@ -796,6 +1163,7 @@ def web_manifest_json(
         "men": {
             "daily": [],
             "rankings": [],
+            "schedule": [],
             "prospects": None,
             "conferences": None,
             "elo_rankings": None,
@@ -803,6 +1171,7 @@ def web_manifest_json(
         "women": {
             "daily": [],
             "rankings": [],
+            "schedule": [],
             "prospects": None,
             "conferences": None,
             "elo_rankings": None,
@@ -829,6 +1198,14 @@ def web_manifest_json(
             manifest[gender]["rankings"] = sorted([
                 f.replace(".json", "") 
                 for f in os.listdir(rankings_path) 
+                if f.endswith(".json")
+            ], reverse=True)
+
+        schedule_path = os.path.join(gender_path, "schedule")
+        if os.path.exists(schedule_path):
+            manifest[gender]["schedule"] = sorted([
+                f.replace(".json", "")
+                for f in os.listdir(schedule_path)
                 if f.endswith(".json")
             ], reverse=True)
         

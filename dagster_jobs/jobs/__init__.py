@@ -95,6 +95,7 @@ web_export_job = define_asset_job(
                     "sparkline_games": 10,
                 }
             },
+            "web_schedule_json": {"config": {"schedule_date": "", "days_ahead": 2}},
             "web_votes_elo_json": {"config": {"end_date": ""}},
             "web_manifest_json": {"config": {"end_date": ""}},
         },
@@ -119,6 +120,7 @@ web_export_job_women = define_asset_job(
                 }
             },
             "web_conferences_json": {"config": {"women": True}},
+            "web_schedule_json": {"config": {"women": True, "schedule_date": "", "days_ahead": 2}},
             "web_manifest_json": {"config": {"end_date": ""}},
         },
     },
