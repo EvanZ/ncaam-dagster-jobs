@@ -823,6 +823,14 @@ def web_schedule_json(
             start_iso = competition.get("date") or event.get("date")
             start_dt = iso_dt(start_iso)
 
+            venue_obj = competition.get("venue") or {}
+            venue_addr = venue_obj.get("address") or {}
+            venue_city = venue_addr.get("city")
+            venue_state = venue_addr.get("state") or venue_addr.get("zipCode")
+            venue_country = venue_addr.get("country")
+            venue_location_parts = [p for p in [venue_city, venue_state] if p]
+            venue_location = ", ".join(venue_location_parts) if venue_location_parts else (venue_country or None)
+
             home_featured = team_players.get(home_team.get("team_id"), [])[:max_per_team]
             away_featured = team_players.get(away_team.get("team_id"), [])[:max_per_team]
             featured = sorted(home_featured + away_featured, key=lambda p: p["overall_rank"])[:max_featured]
@@ -838,7 +846,11 @@ def web_schedule_json(
                     "start_time": start_dt.isoformat() if start_dt else start_iso,
                     "status": status_type.get("detail") or status_type.get("description"),
                     "neutral_site": bool(competition.get("neutralSite")),
-                    "venue": (competition.get("venue") or {}).get("fullName"),
+                    "venue": venue_obj.get("fullName"),
+                    "venue_city": venue_city,
+                    "venue_state": venue_state,
+                    "venue_country": venue_country,
+                    "venue_location": venue_location,
                     "broadcast": broadcast,
                     "odds": odds,
                     "home": home_team,
