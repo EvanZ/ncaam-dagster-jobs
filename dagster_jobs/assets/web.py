@@ -701,34 +701,12 @@ def web_schedule_json(
             tid = int(tid)
         except (TypeError, ValueError):
             continue
-        player_copy = dict(player)
-        class_rank = player.get("class_rank")
-        display_rank = player.get("display_rank") or class_rank
-        player_copy.update(
-            {
-                "player_id": player.get("player_id"),
-                "display_name": player.get("display_name") or player.get("full_name"),
-                "full_name": player.get("full_name") or player.get("display_name"),
-                "team_id": tid,
-                "team_conf": player.get("team_conf"),
-                "headshot": player.get("headshot_href"),
-                "headshot_href": player.get("headshot_href"),
-                "ez": player.get("ez"),
-                "gp": player.get("gp"),
-                "season_score": season_score(player),
-                "overall_rank": idx,
-                "class_rank": class_rank if class_rank is not None else idx,
-                "display_rank": display_rank if display_rank is not None else idx,
-                "class": player.get("experience_display_value"),
-                "experience_display_value": player.get("experience_display_value"),
-                "position": player.get("position_display_name"),
-                "position_display_name": player.get("position_display_name"),
-                "recruit_rank": player.get("recruit_rank"),
-                "jersey": player.get("jersey"),
-                "ez_history": player.get("ez_history") or [],
-            }
-        )
-        team_players[tid].append(player_copy)
+        team_players[tid].append({
+            "player_id": player.get("player_id"),
+            "team_id": tid,
+            "overall_rank": idx,
+            "display_rank": idx,
+        })
 
     def build_team_side(comp) -> dict:
         team = comp.get("team") or {}
