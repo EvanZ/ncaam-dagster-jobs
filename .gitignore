@@ -20,3 +20,6 @@ data/web/women/conferences.json
 data/web/votes/*
 data/web/men/elo_rankings.json
 .DS_Store
+dagster-jobs.egg-info
+data/web/
+templates/*.html
