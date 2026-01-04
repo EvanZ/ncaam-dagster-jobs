@@ -1,4 +1,10 @@
+import warnings
+
 from dagster import Definitions, load_assets_from_modules, with_source_code_references
+from dagster._utils.warnings import BetaWarning
+
+# Silence noisy beta warnings from Dagster helpers (e.g., with_source_code_references).
+warnings.filterwarnings("ignore", category=BetaWarning)
 
 from .assets import espn, women, models, web
 from .resources import database_resource, download_base_path, jinja_templates_path
