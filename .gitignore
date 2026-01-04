@@ -23,3 +23,4 @@ data/web/men/elo_rankings.json
 dagster-jobs.egg-info
 data/web/
 templates/*.html
+*.tmp_dagster_home*

@@ -25,7 +25,13 @@ from .constants import (
     MODELS_WOMEN
     )
 
-warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
+# Dagster 1.12 removed ExperimentalWarning; ignore if present for older versions
+try:
+    _exp_warn = getattr(dagster, "ExperimentalWarning", None)
+    if _exp_warn:
+        warnings.filterwarnings("ignore", category=_exp_warn)
+except Exception:
+    pass
 
 def build_stage_box_stat_adjustment_factors(stat: Literal["tov", "fta", "ftm", "fga", "fg3a", "fg3m", 
                                                           "orb", "ast", "stl", "blk", "drb"],

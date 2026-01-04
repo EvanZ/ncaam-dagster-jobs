@@ -9,3 +9,26 @@ module_name = "dagster_jobs"
 filterwarnings = [
     "ignore::DeprecationWarning:google._upb._message.ScalarMapContainer"
 ]
+
+[project]
+name = "dagster-jobs"
+version = "0.0.0"
+description = ""
+requires-python = ">=3.12"
+dependencies = [
+  "dagster==1.12.0",
+  "dagster-webserver==1.12.0",
+  "dagster-cloud==1.12.0",
+  "dagster-duckdb",
+  "pandas",
+  "fasteners",
+  "requests",
+  "boto3",
+  "python-dotenv",
+  "loguru",
+  "scikit-learn",
+  "jinja2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]

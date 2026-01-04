@@ -56,7 +56,13 @@ from ..partitions import daily_partition
 from ..resources import LocalFileStorage, JinjaTemplates
 from ..utils.utils import fetch_data
 
-warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
+# Dagster 1.12 removed ExperimentalWarning; ignore if present for older versions
+try:
+    _exp_warn = getattr(dagster, "ExperimentalWarning", None)
+    if _exp_warn:
+        warnings.filterwarnings("ignore", category=_exp_warn)
+except Exception:
+    pass
 
 
 @asset(
@@ -798,6 +804,11 @@ def build_top_lines_html_table(exp: list[int], name: str="report") -> AssetsDefi
                 exp=exp,
                 top_n=top_n
             )).df()
+
+        # Avoid None comparisons in template
+        for col in ['recruit_rank', 'age_at_draft']:
+            if col in df.columns:
+                df[col] = df[col].fillna(0)
 
         # Set up Jinja2 environment to load templates from the current directory
         env = Environment(loader=FileSystemLoader(searchpath=templates.searchpath))

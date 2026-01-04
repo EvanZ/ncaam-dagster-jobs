@@ -1090,8 +1090,8 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         g.player_id,
         g.game_id,
         games,
-        {"recruiting.rank" if women else "RSCI"} as recruit_rank,
-        DATE '2026-06-25' - birthday::DATE as age_at_draft,
+        coalesce({"recruiting.rank" if women else "RSCI"}, 0) as recruit_rank,
+        coalesce(DATE '2026-06-25' - birthday::DATE, 0) as age_at_draft,
         tr.rank as team_rank,
         tro.rank as opp_rank,
         case when home then team_2_logo else team_1_logo end as team_logo,
@@ -1126,58 +1126,58 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
                 (stats.ftm + 2*stats.fgm + stats.fg3m + 0.001)/nullif(2*(stats.fga + 0.44*stats.fta),0) asc)),
             orbpct:=case when home 
                 then cast(100.0 * stats.orb * sgl.minutes /
-                                    (g.minutes * (team_2_stats.drb + team_1_stats.orb)) as INT)
+                                    nullif(g.minutes * (team_2_stats.drb + team_1_stats.orb),0) as INT)
                 else cast(100.0 * stats.orb * sgl.minutes /
-                                    (g.minutes * (team_1_stats.drb + team_2_stats.orb)) as INT)
+                                    nullif(g.minutes * (team_1_stats.drb + team_2_stats.orb),0) as INT)
                 end,
             orbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 case when home 
                 then cast(100.0 * (stats.orb+0.001) * sgl.minutes /
-                                    (g.minutes * (team_2_stats.drb + team_1_stats.orb)) as INT)
+                                    nullif(g.minutes * (team_2_stats.drb + team_1_stats.orb),0) as INT)
                 else cast(100.0 * (stats.orb+0.001) * sgl.minutes /
-                                    (g.minutes * (team_1_stats.drb + team_2_stats.orb)) as INT)
+                                    nullif(g.minutes * (team_1_stats.drb + team_2_stats.orb),0) as INT)
                 end asc)),
             drbpct:=case when home 
                 then cast(100.0 * stats.drb * sgl.minutes /
-                                    (g.minutes * (team_2_stats.orb + team_1_stats.drb)) as INT)
+                                    nullif(g.minutes * (team_2_stats.orb + team_1_stats.drb),0) as INT)
                 else cast(100.0 * stats.drb * sgl.minutes /
-                                    (g.minutes * (team_1_stats.orb + team_2_stats.drb)) as INT)
+                                    nullif(g.minutes * (team_1_stats.orb + team_2_stats.drb),0) as INT)
                 end,
             drbpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 case when home 
                 then cast(100.0 * (stats.drb+0.001) * sgl.minutes /
-                                    (g.minutes * (team_2_stats.orb + team_1_stats.drb)) as INT)
+                                    nullif(g.minutes * (team_2_stats.orb + team_1_stats.drb),0) as INT)
                 else cast(100.0 * (stats.drb+0.001) * sgl.minutes /
-                                    (g.minutes * (team_1_stats.orb + team_2_stats.drb)) as INT)
+                                    nullif(g.minutes * (team_1_stats.orb + team_2_stats.drb),0) as INT)
                 end asc)),
             usg:=case when home 
                 then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * sgl.minutes /
-                                    (g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+                                    nullif(g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov),0) as INT)
                 else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov) * sgl.minutes /
-                                    (g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+                                    nullif(g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov),0) as INT)
                 end,
             usgpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 case when home 
                 then cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov + 0.001) * sgl.minutes /
-                                    (g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov)) as INT)
+                                    nullif(g.minutes * (team_2_stats.fga + 0.44 * team_2_stats.fta + team_2_stats.tov),0) as INT)
                 else cast(100.0 * (stats.fga + 0.44 * stats.fta + stats.tov + 0.001) * sgl.minutes /
-                                    (g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov)) as INT)
+                                    nullif(g.minutes * (team_1_stats.fga + 0.44 * team_1_stats.fta + team_1_stats.tov),0) as INT)
                 end asc)),
             ppp:=round((stats.ftm + 2*stats.fgm + stats.fg3m)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0),2),
             ppppctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 (stats.ftm + 2*stats.fgm + stats.fg3m + 0.001)/nullif(stats.fga + 0.44 * stats.fta + stats.tov,0) asc)),
             astpct:=case when home 
                 then cast(100.0 * stats.ast * sgl.minutes /
-                                    (g.minutes * (team_2_stats.fgm - stats.fgm)) as INT)
+                                    nullif(g.minutes * (team_2_stats.fgm - stats.fgm),0) as INT)
                 else cast(100.0 * stats.ast * sgl.minutes /
-                                    (g.minutes * (team_1_stats.fgm - stats.fgm)) as INT)
+                                    nullif(g.minutes * (team_1_stats.fgm - stats.fgm),0) as INT)
                 end,
             astpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 case when home 
                 then cast(100.0 * (stats.ast+0.001) * sgl.minutes /
-                                    (g.minutes * (team_2_stats.fgm - stats.fgm)) as INT)
+                                    nullif(g.minutes * (team_2_stats.fgm - stats.fgm),0) as INT)
                 else cast(100.0 * (stats.ast+0.001) * sgl.minutes /
-                                    (g.minutes * (team_1_stats.fgm - stats.fgm)) as INT)
+                                    nullif(g.minutes * (team_1_stats.fgm - stats.fgm),0) as INT)
                 end asc)),
             tovpct:=cast(100.0 * stats.tov/(stats.fga + 0.44*stats.fta + stats.tov) as INT),
             tovpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by

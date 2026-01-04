@@ -22,7 +22,13 @@ from ..partitions import daily_partition
 from ..resources import LocalFileStorage, JinjaTemplates
 from ..utils.utils import fetch_data
 
-warnings.filterwarnings("ignore", category=dagster.ExperimentalWarning)
+# Dagster 1.12 removed ExperimentalWarning; ignore if present for older versions
+try:
+    _exp_warn = getattr(dagster, "ExperimentalWarning", None)
+    if _exp_warn:
+        warnings.filterwarnings("ignore", category=_exp_warn)
+except Exception:
+    pass
 
 @asset(
     deps=["stage_game_logs"],
