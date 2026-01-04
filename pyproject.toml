@@ -10,6 +10,13 @@ filterwarnings = [
     "ignore::DeprecationWarning:google._upb._message.ScalarMapContainer"
 ]
 
+[tool.dg]
+directory_type = "project"
+project.root_module = "dagster_jobs"
+project.registry_modules = [
+    "dagster_jobs.components.espn_api_download",
+]
+
 [project]
 name = "dagster-jobs"
 version = "0.0.0"
@@ -28,6 +35,7 @@ dependencies = [
   "loguru",
   "scikit-learn",
   "jinja2",
+  "dagster-dg-cli>=1.12.0",
 ]
 
 [project.optional-dependencies]
