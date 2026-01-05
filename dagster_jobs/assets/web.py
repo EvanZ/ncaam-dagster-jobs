@@ -546,6 +546,7 @@ def web_conferences_json(
         "max_featured": Field(Int, default_value=4, is_required=False),
         "max_per_team": Field(Int, default_value=2, is_required=False),
         "days_ahead": Field(Int, default_value=0, is_required=False, description="Also export this many future days (inclusive of schedule_date)"),
+        "days_back": Field(Int, default_value=2, is_required=False, description="Also export this many past days"),
     },
     group_name=WEB_EXPORT,
     compute_kind=PYTHON,
@@ -567,9 +568,12 @@ def web_schedule_json(
     max_featured = cfg.get("max_featured") or 4
     max_per_team = cfg.get("max_per_team") or 2
     days_ahead = int(cfg.get("days_ahead") or 0)
+    days_back = int(cfg.get("days_back") or 0)
 
     if days_ahead < 0:
         raise ValueError("days_ahead cannot be negative")
+    if days_back < 0:
+        raise ValueError("days_back cannot be negative")
 
     try:
         base_schedule_dt = datetime.strptime(base_schedule_date, "%Y-%m-%d")
@@ -578,7 +582,7 @@ def web_schedule_json(
 
     schedule_dates = [
         (base_schedule_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
-        for offset in range(days_ahead + 1)
+        for offset in range(-days_back, days_ahead + 1)
     ]
 
     def season_score(player: dict) -> float:
@@ -924,6 +928,13 @@ def web_votes_elo_json(
                 rankings_date = manifest.get("men", {}).get("rankings", [manifest.get("latest_date")])[0]
             except Exception:
                 rankings_date = None
+    # Fallback: pick the latest rankings file on disk
+    if not rankings_date:
+        rankings_dir = Path(web_data_path) / "men" / "rankings"
+        if rankings_dir.exists():
+            ranking_files = sorted(rankings_dir.glob("*.json"))
+            if ranking_files:
+                rankings_date = ranking_files[-1].stem
     if not rankings_date:
         raise ValueError("rankings_date not provided and could not infer from manifest.")
 

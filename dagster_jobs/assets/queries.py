@@ -1065,14 +1065,41 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
     """
     build the top lines html report query
     """
+    exp_list = ", ".join(map(str, exp))
+
+    # Always take the top N, but also force-include RSCI Top 100 freshmen with ez > 5 so
+    # high-priority prospects don't fall through the cracks.
+    rsci_cte = ""
+    union_cte = "games as (\n        select * from base\n    )"
+    if not women:
+        rsci_cte = f"""
+    , must_include as (
+        select stl.*
+        from stage_top_lines stl
+        left join stage_players p on stl.player_id = p.id
+        left join stage_rsci_rankings r
+            on lower(trim(p.full_name)) = lower(trim(r.Player))
+        where stl.years in ({exp_list})
+          and stl.date between '{start_date}' and '{end_date}'
+          and stl.ez > 5
+          and p.experience_abbreviation = 'FR'
+          and coalesce(r.RSCI, 999) <= 100
+    )"""
+        union_cte = """games as (
+        select * from base
+        union
+        select * from must_include
+    )"""
+
     return f"""
-    with games as (
+    with base as (
         from {'stage_top_lines_women' if women else 'stage_top_lines'}
-        where years in ({', '.join(map(str, exp))})
+        where years in ({exp_list})
         and date between '{start_date}' and '{end_date}'
         order by ez desc
         limit {top_n}
-    ),
+    ){rsci_cte},
+    {union_cte},
     metrics as (
         select 
             player_id,
@@ -1264,7 +1291,8 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
     from games g join metrics m on g.player_id=m.player_id and g.game_id=m.game_id
     join {'stage_game_logs_women' if women else 'stage_game_logs'} sgl on g.game_id=sgl.game_id
     left join {'stage_players_women' if women else 'stage_players'} p on g.player_id=p.id
-    left join {'stage_hoopgurlz_rankings' if women else 'stage_rsci_rankings'} recruiting on p.full_name=recruiting.{'name' if women else 'Player'}
+    left join {'stage_hoopgurlz_rankings' if women else 'stage_rsci_rankings'} recruiting
+        on lower(trim(p.full_name)) = lower(trim(recruiting.{'name' if women else 'Player'}))
     left join stage_prospect_birthdays b on p.full_name=b.name
     join {'stage_teams_women' if women else 'stage_teams'} t1 on g.team_id=t1.id
     join {'stage_teams_women' if women else 'stage_teams'} t2 on g.opp_id=t2.id
@@ -1294,6 +1322,20 @@ def prospect_rankings_report_query(
     include_filter = ""
     if include_ids:
         include_filter = f"and tl.player_id in ({', '.join(map(str, include_ids))})"
+
+    # Always include ranked freshmen even if they fall outside top_n
+    must_include_cte = f"""
+        must_include as (
+            select distinct tl.player_id
+            from {'stage_top_lines_women' if women else 'stage_top_lines'} tl
+            join {'stage_players_women' if women else 'stage_players'} p on tl.player_id = p.id
+            left join {'stage_hoopgurlz_rankings' if women else 'stage_rsci_rankings'} r
+                on lower(trim(p.full_name)) = lower(trim(r.{'name' if women else 'Player'}))
+            where p.experience_abbreviation = 'FR'
+              and tl.date between '{start_date}' and '{end_date}'
+              and r.{'rank' if women else 'RSCI'} is not null
+        ),
+    """
 
     stats_select = f"""
         select
@@ -1361,6 +1403,7 @@ def prospect_rankings_report_query(
 
     if include_ids:
         stats_cte = f"""
+        {must_include_cte}
         stats_base as (
             {stats_select.format(extra_filter="")}
             order by ez desc
@@ -1369,23 +1412,43 @@ def prospect_rankings_report_query(
         stats_manual as (
             {stats_select.format(extra_filter=include_filter)}
         ),
+        stats_ranked_fr as (
+            {stats_select.format(extra_filter="and tl.player_id in (select player_id from must_include)")}
+        ),
         stats as (
             select * from stats_base
             union
             select * from stats_manual
+            union
+            select * from stats_ranked_fr
         ),
         """
     else:
         stats_cte = f"""
-        stats as (
+        {must_include_cte}
+        stats_base as (
             {stats_select.format(extra_filter="")}
             order by ez desc
             limit {top_n}
+        ),
+        stats_ranked_fr as (
+            {stats_select.format(extra_filter="and tl.player_id in (select player_id from must_include)")}
+        ),
+        stats as (
+            select * from stats_base
+            union
+            select * from stats_ranked_fr
         ),
         """
 
     return f"""
     with {stats_cte}
+    stats_unique as (
+        select * from (
+            select s.*, row_number() over (partition by player_id order by ez desc) as rn
+            from stats s
+        ) where rn = 1
+    ),
     sos as (
         with team_games as (
             with schedules as (
@@ -1698,7 +1761,7 @@ def prospect_rankings_report_query(
             blkpctpctile:=100.0*(percent_rank() over (partition by experience_abbreviation order by
                 blk * team_minutes / (minutes*(opp_fga-opp_fg3a))))
         ) as defense
-    from stats s join {'stage_players_women' if women else 'stage_players'} p on s.player_id=p.id
+    from stats_unique s join {'stage_players_women' if women else 'stage_players'} p on s.player_id=p.id
     left join {'stage_rsci_rankings' if not women else 'stage_hoopgurlz_rankings'} rsci on p.full_name=rsci.{'Player' if not women else 'name'}
     left join stage_prospect_birthdays b on p.full_name=b.name
     left join (select name, agency from read_csv('data/raw/2025/early_entrants/data.csv')) ee on p.full_name=ee.name
