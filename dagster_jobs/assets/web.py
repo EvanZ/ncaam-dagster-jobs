@@ -41,6 +41,7 @@ from .constants import (
     SCOREBOARD_URL_TEMPLATE,
     SCOREBOARD_URL_TEMPLATE_WOMEN,
 )
+from ..partitions import daily_partition
 from ..resources import LocalFileStorage
 from ..utils.utils import fetch_data
 
@@ -189,6 +190,125 @@ def load_elo_ratings(gender: str) -> dict[int, dict]:
         for idx, p in enumerate(sorted_players)
         if p.get("player_id") is not None
     }
+
+
+def _write_top_lines_by_date(
+    partition_date: str,
+    df: pd.DataFrame,
+    gender: str,
+    ez_history: dict[int, list[float]] | None = None,
+) -> str:
+    history = ez_history or {}
+    players = convert_structs_to_dicts(df)
+    for player in players:
+        try:
+            pid = int(player.get("player_id"))
+        except (TypeError, ValueError):
+            pid = None
+        if pid is None:
+            continue
+        if pid in history:
+            player["ez_history"] = history[pid]
+    web_data_path = os.path.join(
+        os.environ.get("DAGSTER_HOME", "."),
+        "data",
+        "web",
+        gender,
+        "toplines",
+    )
+    os.makedirs(web_data_path, exist_ok=True)
+
+    output = {
+        "meta": {
+            "generated_at": datetime.now().isoformat(),
+            "date": partition_date,
+            "gender": gender,
+            "total_players": len(players),
+        },
+        "players": players,
+    }
+
+    output_file = os.path.join(web_data_path, f"{partition_date}.json")
+    with open(output_file, "w") as f:
+        json.dump(output, f, indent=2, default=str)
+    maybe_upload_json(output_file, f"{gender}/toplines/{partition_date}.json")
+    return output_file
+
+
+@asset(
+    partitions_def=daily_partition,
+    config_schema={
+        "top_n": Field(Int, default_value=500, is_required=False),
+    },
+    group_name=WEB_EXPORT,
+    compute_kind=PYTHON,
+)
+def web_top_lines_by_date_men(
+    context: AssetExecutionContext,
+    database: DuckDBResource,
+) -> MaterializeResult:
+    partition_date = context.partition_key
+    top_n = context.op_config.get("top_n") or 500
+    sparkline_games = 10
+
+    with database.get_connection() as conn:
+        df = conn.execute(
+            query=queries.top_lines_report_query(
+                start_date=partition_date,
+                end_date=partition_date,
+                exp=[0, 1, 2, 3, 4, 5],
+                top_n=top_n,
+                women=False,
+            )
+        ).df()
+        history_map = load_ez_history(conn, df["player_id"].tolist(), sparkline_games, women=False)
+
+    output_file = _write_top_lines_by_date(partition_date, df, "men", history_map)
+    return MaterializeResult(
+        metadata={
+            "output_file": MetadataValue.path(output_file),
+            "date": MetadataValue.text(partition_date),
+            "total_players": MetadataValue.int(len(df)),
+        }
+    )
+
+
+@asset(
+    partitions_def=daily_partition,
+    config_schema={
+        "top_n": Field(Int, default_value=500, is_required=False),
+    },
+    group_name=WEB_EXPORT,
+    compute_kind=PYTHON,
+)
+def web_top_lines_by_date_women(
+    context: AssetExecutionContext,
+    database: DuckDBResource,
+) -> MaterializeResult:
+    partition_date = context.partition_key
+    top_n = context.op_config.get("top_n") or 500
+    sparkline_games = 10
+
+    with database.get_connection() as conn:
+        df = conn.execute(
+            query=queries.top_lines_report_query(
+                start_date=partition_date,
+                end_date=partition_date,
+                exp=[0, 1, 2, 3, 4, 5],
+                top_n=top_n,
+                women=True,
+            )
+        ).df()
+        history_map = load_ez_history(conn, df["player_id"].tolist(), sparkline_games, women=True)
+
+    output_file = _write_top_lines_by_date(partition_date, df, "women", history_map)
+    return MaterializeResult(
+        metadata={
+            "output_file": MetadataValue.path(output_file),
+            "date": MetadataValue.text(partition_date),
+            "total_players": MetadataValue.int(len(df)),
+        }
+    )
 
 
 @asset(
@@ -543,8 +663,8 @@ def web_conferences_json(
         "schedule_date": Field(Noneable(String), default_value=None, is_required=False),
         "rankings_date": Field(Noneable(String), default_value=None, is_required=False),
         "women": Field(Bool, default_value=False, is_required=False),
-        "max_featured": Field(Int, default_value=4, is_required=False),
-        "max_per_team": Field(Int, default_value=2, is_required=False),
+        "max_featured": Field(Noneable(Int), default_value=None, is_required=False),
+        "max_per_team": Field(Noneable(Int), default_value=None, is_required=False),
         "days_ahead": Field(Int, default_value=0, is_required=False, description="Also export this many future days (inclusive of schedule_date)"),
         "days_back": Field(Int, default_value=2, is_required=False, description="Also export this many past days"),
     },
@@ -565,8 +685,8 @@ def web_schedule_json(
     women = resolve_women(context)
     base_schedule_date = cfg.get("schedule_date") or date.today().isoformat()
     rankings_date = cfg.get("rankings_date")
-    max_featured = cfg.get("max_featured") or 4
-    max_per_team = cfg.get("max_per_team") or 2
+    max_featured = cfg.get("max_featured")
+    max_per_team = cfg.get("max_per_team")
     days_ahead = int(cfg.get("days_ahead") or 0)
     days_back = int(cfg.get("days_back") or 0)
 
@@ -710,6 +830,21 @@ def web_schedule_json(
             "team_id": tid,
             "overall_rank": idx,
             "display_rank": idx,
+            "display_name": player.get("display_name"),
+            "headshot_href": player.get("headshot_href"),
+            "experience_display_value": player.get("experience_display_value"),
+            "experience_abbreviation": player.get("experience_abbreviation"),
+            "position_display_name": player.get("position_display_name"),
+            "position": player.get("position"),
+            "position_abbreviation": player.get("position_abbreviation"),
+            "display_height": player.get("display_height"),
+            "display_weight": player.get("display_weight"),
+            "jersey": player.get("jersey"),
+            "city": player.get("city"),
+            "state": player.get("state"),
+            "country": player.get("country"),
+            "agency": player.get("agency"),
+            "team_conf": player.get("team_conf"),
         })
 
     def build_team_side(comp) -> dict:
@@ -813,9 +948,13 @@ def web_schedule_json(
             venue_location_parts = [p for p in [venue_city, venue_state] if p]
             venue_location = ", ".join(venue_location_parts) if venue_location_parts else (venue_country or None)
 
-            home_featured = team_players.get(home_team.get("team_id"), [])[:max_per_team]
-            away_featured = team_players.get(away_team.get("team_id"), [])[:max_per_team]
-            featured = sorted(home_featured + away_featured, key=lambda p: p["overall_rank"])[:max_featured]
+            home_list = team_players.get(home_team.get("team_id"), [])
+            away_list = team_players.get(away_team.get("team_id"), [])
+            home_featured = home_list if not max_per_team else home_list[:max_per_team]
+            away_featured = away_list if not max_per_team else away_list[:max_per_team]
+            featured = sorted(home_featured + away_featured, key=lambda p: p["overall_rank"])
+            if max_featured:
+                featured = featured[:max_featured]
 
             try:
                 game_id = int(event.get("id"))
@@ -1165,6 +1304,7 @@ def web_manifest_json(
             "daily": [],
             "rankings": [],
             "schedule": [],
+            "toplines": [],
             "prospects": None,
             "conferences": None,
             "elo_rankings": None,
@@ -1173,6 +1313,7 @@ def web_manifest_json(
             "daily": [],
             "rankings": [],
             "schedule": [],
+            "toplines": [],
             "prospects": None,
             "conferences": None,
             "elo_rankings": None,
@@ -1207,6 +1348,14 @@ def web_manifest_json(
             manifest[gender]["schedule"] = sorted([
                 f.replace(".json", "")
                 for f in os.listdir(schedule_path)
+                if f.endswith(".json")
+            ], reverse=True)
+
+        toplines_path = os.path.join(gender_path, "toplines")
+        if os.path.exists(toplines_path):
+            manifest[gender]["toplines"] = sorted([
+                f.replace(".json", "")
+                for f in os.listdir(toplines_path)
                 if f.endswith(".json")
             ], reverse=True)
         

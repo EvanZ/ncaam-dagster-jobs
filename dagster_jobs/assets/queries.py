@@ -1049,8 +1049,13 @@ def insert_table_stage_top_lines(date: str, women: bool=False) -> str:
                 stocks:=1.0*(stl/(ta.stl_drtg*oa.stl_ortg))
                 + 0.7*(blk/(ta.blk_drtg*oa.blk_ortg))
             ) as ez_components
-        from lines l join {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'} s on l.game_id=s.game_id
-        and l.player_id=s.player_id 
+        from lines l 
+        join {'stage_player_shots_by_game_women' if women else 'stage_player_shots_by_game'} s 
+            on l.game_id=s.game_id
+           and l.player_id=s.player_id 
+        -- Note: inner join on shots means a player with zero FGA (no shots row) will be dropped
+        -- from stage_top_lines even if they're in stage_player_lines. Leave as-is for now; revisit if
+        -- zero-shot games need to be retained.
         left join {'stage_player_assists_by_game_women' if women else 'stage_player_assists_by_game'} a on l.game_id=a.game_id
         and l.player_id=a.player_id
         join team_adj ta on l.team_id=ta.team_id
@@ -1067,8 +1072,8 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
     """
     exp_list = ", ".join(map(str, exp))
 
-    # Always take the top N, but also force-include RSCI Top 100 freshmen with ez > 5 so
-    # high-priority prospects don't fall through the cracks.
+    # Always take the top N, but also force-include RSCI-ranked freshmen whose single-game EZ
+    # clears the threshold so important performances don't fall through.
     rsci_cte = ""
     union_cte = "games as (\n        select * from base\n    )"
     if not women:
@@ -1078,12 +1083,12 @@ def top_lines_report_query(start_date:str, end_date:str, exp: list[int], top_n: 
         from stage_top_lines stl
         left join stage_players p on stl.player_id = p.id
         left join stage_rsci_rankings r
-            on lower(trim(p.full_name)) = lower(trim(r.Player))
+            on lower(trim(coalesce(p.full_name, p.display_name))) = lower(trim(r.Player))
         where stl.years in ({exp_list})
           and stl.date between '{start_date}' and '{end_date}'
-          and stl.ez > 5
+          and stl.ez >= 5
           and p.experience_abbreviation = 'FR'
-          and coalesce(r.RSCI, 999) <= 100
+          and r.RSCI is not null
     )"""
         union_cte = """games as (
         select * from base

@@ -82,7 +82,7 @@ season_report_job_women = define_asset_job(
 # Web export job - generates JSON for the Vue.js frontend
 web_export_job = define_asset_job(
     name="web_export",
-    selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json"),
+    selection=AssetSelection.groups(WEB_EXPORT) - AssetSelection.assets("web_prospects_json", "web_top_lines_by_date_men", "web_top_lines_by_date_women"),
     config={
         "ops": {
             "web_daily_report_json": {"config": {"end_date": "", "top_n": 500, "sparkline_games": 10}},
@@ -105,7 +105,7 @@ web_export_job = define_asset_job(
 web_export_job_women = define_asset_job(
     name="web_export_women",
     selection=AssetSelection.groups(WEB_EXPORT)
-    - AssetSelection.assets("web_prospects_json", "web_votes_elo_json"),
+    - AssetSelection.assets("web_prospects_json", "web_votes_elo_json", "web_top_lines_by_date_men", "web_top_lines_by_date_women"),
     config={
         "ops": {
             "web_daily_report_json": {"config": {"women": True, "end_date": "", "top_n": 500, "sparkline_games": 10}},
