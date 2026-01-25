@@ -242,6 +242,7 @@ def _write_top_lines_by_date(
     },
     group_name=WEB_EXPORT,
     compute_kind=PYTHON,
+    deps=["stage_top_lines"],
 )
 def web_top_lines_by_date_men(
     context: AssetExecutionContext,
@@ -280,6 +281,7 @@ def web_top_lines_by_date_men(
     },
     group_name=WEB_EXPORT,
     compute_kind=PYTHON,
+    deps=["stage_top_lines_women"],
 )
 def web_top_lines_by_date_women(
     context: AssetExecutionContext,
@@ -704,6 +706,7 @@ def web_schedule_json(
         (base_schedule_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
         for offset in range(-days_back, days_ahead + 1)
     ]
+    today_iso = date.today().isoformat()
 
     def season_score(player: dict) -> float:
         try:
@@ -878,6 +881,31 @@ def web_schedule_json(
     outputs = []
 
     for schedule_date in schedule_dates:
+        is_past_date = schedule_date < today_iso
+        toplines_by_game: dict[int, set[int]] = {}
+        if is_past_date:
+            toplines_file = os.path.join(
+                web_root,
+                "women" if women else "men",
+                "toplines",
+                f"{schedule_date}.json",
+            )
+            if os.path.exists(toplines_file):
+                try:
+                    with open(toplines_file, "r") as f:
+                        tl = json.load(f)
+                    for p in tl.get("players", []):
+                        try:
+                            gid = int(p.get("game_id"))
+                            pid = int(p.get("player_id"))
+                        except (TypeError, ValueError):
+                            continue
+                        if gid not in toplines_by_game:
+                            toplines_by_game[gid] = set()
+                        toplines_by_game[gid].add(pid)
+                except Exception as exc:
+                    context.log.warning(f"Failed to read toplines for {schedule_date}: {exc}")
+
         try:
             schedule_dt = datetime.strptime(schedule_date, "%Y-%m-%d")
         except ValueError:
@@ -982,6 +1010,23 @@ def web_schedule_json(
                     "_sort": start_dt.timestamp() if start_dt else None,
                 }
             )
+
+            # If this is a past date and we have toplines for the game, keep only players with a toplines entry
+            if is_past_date and featured:
+                tl_ids = toplines_by_game.get(game_id) or set()
+                if tl_ids:
+                    filtered = []
+                    for p in featured:
+                        try:
+                            pid = int(p.get("player_id"))
+                        except (TypeError, ValueError):
+                            continue
+                        if pid in tl_ids:
+                            filtered.append(p)
+                    games[-1]["featured_players"] = filtered
+                else:
+                    # No toplines for this past game; leave featured as-is
+                    pass
 
         games.sort(key=lambda g: (g.get("_sort") is None, g.get("_sort"), g.get("game_id")))
         for game in games:

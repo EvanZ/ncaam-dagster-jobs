@@ -90,8 +90,19 @@ def build_stage_box_stat_adjustment_factors(stat: Literal["tov", "fta", "ftm", "
         encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
         features_offense = ohe_offense.get_feature_names_out()
         features_defense = ohe_defense.get_feature_names_out()
-        team_ids_offense = [name[4:] for name in features_offense]
-        team_ids_defense = [name[4:] for name in features_defense]
+
+        def extract_ids(names):
+            ids = []
+            for n in names:
+                # Handles formats like x0_o99, offense_o99, x0_d99, defense_d99
+                token = n.split('_')[-1]  # take last segment
+                if token and token[0] in ('o', 'd'):
+                    token = token[1:]
+                ids.append(token)
+            return ids
+
+        team_ids_offense = extract_ids(features_offense)
+        team_ids_defense = extract_ids(features_defense)
         context.log.info(df.home)
         X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
         y = df['rating']  # Target: point differential
@@ -128,18 +139,34 @@ def build_stage_box_stat_adjustment_factors(stat: Literal["tov", "fta", "ftm", "
                 """)
 
                 query = f"""
-                    INSERT OR IGNORE INTO {'stage_box_stat_adjustment_factors_women' if women else 'stage_box_stat_adjustment_factors'} 
-                    (
-                    SELECT 
-                        st.id as team_id, 
-                        '{stat}' as stat,
-                        o.rating / avg(o.rating) over () as ortg,
-                        d.rating / avg(d.rating) over () as drtg
-                    FROM ortg_df o
-                    JOIN {'stage_teams_women' if women else 'stage_teams'} st ON o.id=st.id
-                    JOIN drtg_df d on d.id=st.id
+                    WITH ratings AS (
+                        SELECT
+                            CAST(o.id AS INT) AS team_id,
+                            o.rating / AVG(o.rating) OVER () AS ortg,
+                            d.rating / AVG(d.rating) OVER () AS drtg
+                        FROM ortg_df o
+                        JOIN drtg_df d ON d.id = o.id
+                    ),
+                    defaults AS (
+                        SELECT
+                            AVG(ortg) AS avg_ortg,
+                            AVG(drtg) AS avg_drtg
+                        FROM ratings
+                    ),
+                    filled AS (
+                        SELECT
+                            st.id AS team_id,
+                            '{stat}' AS stat,
+                            COALESCE(r.ortg, defaults.avg_ortg) AS ortg,
+                            COALESCE(r.drtg, defaults.avg_drtg) AS drtg
+                        FROM {'stage_teams_women' if women else 'stage_teams'} st
+                        LEFT JOIN ratings r ON r.team_id = st.id
+                        CROSS JOIN defaults
                     )
-                    returning team_id, stat, ortg, drtg;
+                    INSERT OR REPLACE INTO {'stage_box_stat_adjustment_factors_women' if women else 'stage_box_stat_adjustment_factors'}
+                    SELECT team_id, stat, ortg, drtg
+                    FROM filled
+                    RETURNING team_id, stat, ortg, drtg;
                 """
                 result_df = conn.execute(query).df()
 
@@ -244,8 +271,19 @@ def build_stage_shot_type_adjustment_factors(shot: Literal["ast_dunk", "unast_du
         encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
         features_offense = ohe_offense.get_feature_names_out()
         features_defense = ohe_defense.get_feature_names_out()
-        team_ids_offense = [name[4:] for name in features_offense]
-        team_ids_defense = [name[4:] for name in features_defense]
+
+        def extract_ids(names):
+            ids = []
+            for n in names:
+                # Handles formats like x0_o99, offense_o99, x0_d99, defense_d99
+                token = n.split('_')[-1]  # take last segment
+                if token and token[0] in ('o', 'd'):
+                    token = token[1:]
+                ids.append(token)
+            return ids
+
+        team_ids_offense = extract_ids(features_offense)
+        team_ids_defense = extract_ids(features_defense)
         context.log.info(df.home)
         X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
         y = df['rating']  # Target: point differential
@@ -282,18 +320,34 @@ def build_stage_shot_type_adjustment_factors(shot: Literal["ast_dunk", "unast_du
                 """)
 
                 query = f"""
-                    INSERT OR IGNORE INTO {'stage_shot_type_adjustment_factors_women' if women else 'stage_shot_type_adjustment_factors'} 
-                    (
-                    SELECT 
-                        st.id as team_id, 
-                        '{shot}' as stat,
-                        o.rating / avg(o.rating) over () as ortg,
-                        d.rating / avg(d.rating) over () as drtg
-                    FROM ortg_df o
-                    JOIN {'stage_teams_women' if women else 'stage_teams'} st ON o.id=st.id
-                    JOIN drtg_df d on d.id=st.id
+                    WITH ratings AS (
+                        SELECT
+                            CAST(o.id AS INT) AS team_id,
+                            o.rating / AVG(o.rating) OVER () AS ortg,
+                            d.rating / AVG(d.rating) OVER () AS drtg
+                        FROM ortg_df o
+                        JOIN drtg_df d ON d.id = o.id
+                    ),
+                    defaults AS (
+                        SELECT
+                            AVG(ortg) AS avg_ortg,
+                            AVG(drtg) AS avg_drtg
+                        FROM ratings
+                    ),
+                    filled AS (
+                        SELECT
+                            st.id AS team_id,
+                            '{shot}' AS stat,
+                            COALESCE(r.ortg, defaults.avg_ortg) AS ortg,
+                            COALESCE(r.drtg, defaults.avg_drtg) AS drtg
+                        FROM {'stage_teams_women' if women else 'stage_teams'} st
+                        LEFT JOIN ratings r ON r.team_id = st.id
+                        CROSS JOIN defaults
                     )
-                    returning team_id, stat, ortg, drtg;
+                    INSERT OR REPLACE INTO {'stage_shot_type_adjustment_factors_women' if women else 'stage_shot_type_adjustment_factors'}
+                    SELECT team_id, stat, ortg, drtg
+                    FROM filled
+                    RETURNING team_id, stat, ortg, drtg;
                 """
                 result_df = conn.execute(query).df()
 
@@ -396,8 +450,19 @@ def build_stage_team_ratings(higher_is_better: bool=True,
         encoded_defense = ohe_defense.fit_transform(df[['defense']].values)
         features_offense = ohe_offense.get_feature_names_out()
         features_defense = ohe_defense.get_feature_names_out()
-        team_ids_offense = [name[4:] for name in features_offense]
-        team_ids_defense = [name[4:] for name in features_defense]
+
+        def extract_ids(names):
+            ids = []
+            for n in names:
+                # Handles formats like x0_o99, offense_o99, x0_d99, defense_d99
+                token = n.split('_')[-1]  # take last segment
+                if token and token[0] in ('o', 'd'):
+                    token = token[1:]
+                ids.append(token)
+            return ids
+
+        team_ids_offense = extract_ids(features_offense)
+        team_ids_defense = extract_ids(features_defense)
         context.log.info(df.home)
         X = pandas.concat([pandas.DataFrame(df.home.values), pandas.DataFrame(encoded_offense), pandas.DataFrame(encoded_defense)], axis=1)  
         y = df['rating']  # Target: point differential
@@ -439,20 +504,39 @@ def build_stage_team_ratings(higher_is_better: bool=True,
                 """)
 
                 query = f"""
-                    INSERT OR IGNORE INTO {'stage_team_ratings_women' if women else 'stage_team_ratings'} 
-                    (
-                    SELECT 
-                        st.id as team_id, 
-                        o.rating as ortg,
-                        d.rating as drtg,
-                        rank() over (order by o.rating desc) as orank,
-                        rank() over (order by d.rating asc) as drank,
-                        rank() over (order by (o.rating-d.rating) desc) as rank
-                    FROM ortg_df o
-                    JOIN {'stage_teams_women' if women else 'stage_teams'} st ON o.id=st.id
-                    JOIN drtg_df d on d.id=st.id
+                    WITH ratings AS (
+                        SELECT
+                            CAST(o.id AS INT) AS team_id,
+                            o.rating AS ortg,
+                            d.rating AS drtg
+                        FROM ortg_df o
+                        JOIN drtg_df d ON d.id = o.id
+                    ),
+                    defaults AS (
+                        SELECT
+                            AVG(ortg) AS avg_ortg,
+                            AVG(drtg) AS avg_drtg
+                        FROM ratings
+                    ),
+                    filled AS (
+                        SELECT
+                            st.id AS team_id,
+                            COALESCE(r.ortg, defaults.avg_ortg) AS ortg,
+                            COALESCE(r.drtg, defaults.avg_drtg) AS drtg
+                        FROM {'stage_teams_women' if women else 'stage_teams'} st
+                        LEFT JOIN ratings r ON r.team_id = st.id
+                        CROSS JOIN defaults
                     )
-                    returning team_id, ortg, drtg, orank, drank, rank;
+                    INSERT OR REPLACE INTO {'stage_team_ratings_women' if women else 'stage_team_ratings'}
+                    SELECT
+                        team_id,
+                        ortg,
+                        drtg,
+                        RANK() OVER (ORDER BY ortg DESC) AS orank,
+                        RANK() OVER (ORDER BY drtg ASC) AS drank,
+                        RANK() OVER (ORDER BY (ortg - drtg) DESC) AS rank
+                    FROM filled
+                    RETURNING team_id, ortg, drtg, orank, drank, rank;
                 """
                 result_df = conn.execute(query).df()
 

@@ -24,3 +24,8 @@ dagster-jobs.egg-info
 data/web/
 templates/*.html
 *.tmp_dagster_home*
+.dagster_home/*
+.dagster_home_dev/*
+.env.dev
+.env.prod
+DEV_ENV_SETUP.md

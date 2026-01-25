@@ -20,13 +20,19 @@ seasonal_update_job = define_asset_job(
 
 daily_update_job = define_asset_job(
     name="daily_update",
-    selection=AssetSelection.groups(DAILY).required_multi_asset_neighbors(),
+    selection=(
+        AssetSelection.groups(DAILY).required_multi_asset_neighbors()
+        | AssetSelection.assets("web_top_lines_by_date_men")
+    ),
     partitions_def=daily_partition,
 )
 
 daily_update_job_women = define_asset_job(
     name="daily_update_women",
-    selection=AssetSelection.groups(DAILY_WOMEN).required_multi_asset_neighbors(),
+    selection=(
+        AssetSelection.groups(DAILY_WOMEN).required_multi_asset_neighbors()
+        | AssetSelection.assets("web_top_lines_by_date_women")
+    ),
     partitions_def=daily_partition,
 )
 

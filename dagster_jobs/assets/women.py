@@ -459,9 +459,6 @@ def stage_top_lines_women(context: AssetExecutionContext, database: DuckDBResour
                 check_name="has_at_least_one_player"
     )
 
-    if not has_at_least_one_player:
-        raise Exception("No players inserted into staging table. Check for empty schedule? Aborting further materialization.")
-        
     yield Output(
         value=df,
         metadata={
